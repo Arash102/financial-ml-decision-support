@@ -1,0 +1,42 @@
+
+features:
+  - insCode
+  - adj_open
+  - adj_high
+  - adj_low
+  - adj_last_price
+  - zigzag_up_new_2
+  - zigzag_down_new_2
+  - EMA_3
+  - EMA_5
+  - EMA_8
+  - EMA_10
+  - EMA_12
+  - EMA_15
+  - EMA_30
+  - EMA_35
+  - EMA_40
+  - EMA_45
+  - EMA_50
+  - EMA_60
+  - EMA_200
+  - RSI_14
+  - RSI_Signal
+  - macd
+  - power_of_buy
+  - volume_per_avg_month
+  - ho_buy
+  - ho_sell
+  - x
+  - y
+  - color
+  - gmma
+  - started
+  - body
+  - class
+
+evaluation_only:
+  - max_price_find
+  - min_price_find
+  - after_days
+  - days_max_find
