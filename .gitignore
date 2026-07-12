@@ -1,0 +1,26 @@
+# Raw financial data
+raw_data/
+
+# Prepared datasets
+data_ready/
+
+# Trained models
+models/
+
+# Results generated automatically
+results/
+
+# Python
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment
+.env
+.venv/
+
+# IDE
+.vscode/
+.idea/
