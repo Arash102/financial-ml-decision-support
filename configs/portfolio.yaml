@@ -1,0 +1,9 @@
+status: "not_frozen"
+initial_capital: null
+position_sizing_method: null
+maximum_concurrent_positions: null
+maximum_position_weight: null
+minimum_liquidity_filter: null
+rebalance_rule: null
+cash_handling_rule: null
+warning: "Portfolio assumptions must be frozen before portfolio-level evaluation."

@@ -1,6 +1,8 @@
-
-features:
+metadata:
   - insCode
+  - dEven
+
+candidate_features:
   - adj_open
   - adj_high
   - adj_low
@@ -21,7 +23,6 @@ features:
   - EMA_60
   - EMA_200
   - RSI_14
-  - RSI_Signal
   - macd
   - power_of_buy
   - volume_per_avg_month
@@ -33,10 +34,25 @@ features:
   - gmma
   - started
   - body
-  - class
 
-evaluation_only:
+price_columns:
+  entry: adj_last_price
+  open: adj_open
+  high: adj_high
+  low: adj_low
+
+legacy_audit_optional:
+  - class
   - max_price_find
   - min_price_find
   - after_days
   - days_max_find
+
+explicitly_excluded:
+  - RSI_Signal
+
+notes:
+  - "Metadata columns are never model features."
+  - "The legacy class column is not the new target."
+  - "Legacy future-derived fields are isolated from model-ready files."
+  - "Candidate features remain subject to Notebook 04 leakage review."

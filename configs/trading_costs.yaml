@@ -1,0 +1,11 @@
+status: "not_calibrated"
+currency: "IRR"
+
+components:
+  buy_commission_rate: null
+  sell_commission_rate: null
+  sell_tax_rate: null
+  slippage_bps: null
+  market_impact_model: null
+
+warning: "Do not report net trading performance until these values are calibrated from traceable sources."

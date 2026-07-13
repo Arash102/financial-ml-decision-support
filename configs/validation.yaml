@@ -1,0 +1,24 @@
+status: "draft_not_frozen"
+
+temporal_design:
+  train_end: "2021-03-20"
+  unseen_test_start: "2021-03-21"
+  unseen_test_end: "2024-09-22"
+
+primary_validation:
+  method: "purged_anchored_walk_forward"
+  number_of_folds: 5
+  purge_method: "event_end_overlap"
+  embargo_trading_days: 30
+
+robustness_validation:
+  method: "cpcv"
+  enabled_during_primary_model_selection: false
+
+rules:
+  - "The unseen test must not be used for feature selection."
+  - "The unseen test must not be used for label design."
+  - "The unseen test must not be used for hyperparameter optimization."
+  - "The unseen test must not be used for algorithm selection."
+  - "The unseen test must not be used for threshold selection."
+  - "The unseen test must not be used for universe optimization."

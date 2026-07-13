@@ -1,0 +1,22 @@
+data_root_mode: "repository_root"
+environment_variable: "FINML_DATA_ROOT"
+
+directories:
+  raw_data: "raw_data"
+  prepared_data: "data_ready/prepared"
+  legacy_audit_data: "data_ready/legacy_audit"
+  train_data: "data_ready/train"
+  unseen_test_data: "data_ready/unseen_test"
+  labeled_data: "data_ready/labeled"
+  portfolio_data: "data_ready/portfolio"
+
+repository_results:
+  audits: "results/audits"
+  folds: "results/folds"
+  optuna: "results/optuna"
+  models: "results/models"
+  predictions: "results/predictions"
+  metrics: "results/metrics"
+  backtests: "results/backtests"
+  figures: "results/figures"
+  manifests: "results/manifests"

@@ -1,0 +1,22 @@
+# Locked environment for Windows x64 + CPython 3.12.
+# Direct wheel URLs are used for packages that the local pip resolver failed
+# to enumerate from the PyPI simple index.
+
+ipykernel==6.29.5
+numpy==1.26.4
+
+pandas @ https://files.pythonhosted.org/packages/29/d4/1244ab8edf173a10fd601f7e13b9566c1b525c4f365d6bee918e68381889/pandas-2.2.3-cp312-cp312-win_amd64.whl
+
+PyYAML==6.0.2
+scipy==1.14.1
+
+scikit-learn @ https://files.pythonhosted.org/packages/aa/ce/c0b912f2f31aeb1b756a6ba56bcd84dd1f8a148470526a48515a3f4d48cd/scikit_learn-1.5.2-cp312-cp312-win_amd64.whl
+
+xgboost==2.1.4
+optuna==4.2.1
+joblib==1.4.2
+
+statsmodels @ https://files.pythonhosted.org/packages/59/9a/e466a1b887a1441141e52dbcc98152f013d85076576da6eed2357f2016ae/statsmodels-0.14.4-cp312-cp312-win_amd64.whl
+
+matplotlib==3.9.2
+typing-extensions==4.12.2

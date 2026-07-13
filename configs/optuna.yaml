@@ -1,0 +1,16 @@
+n_trials: 30
+direction: "maximize"
+sampler: "TPESampler"
+pruner: "MedianPruner"
+seed: 20260713
+storage: "sqlite:///results/optuna/financial_ml_optuna.sqlite3"
+load_if_exists: true
+
+objective:
+  primary_metric: "average_precision"
+  stability_penalty_weight: 0.25
+
+rules:
+  - "Optimization is restricted to pre-test training data."
+  - "Every trial must be persisted."
+  - "Pruned and failed trials must remain auditable."

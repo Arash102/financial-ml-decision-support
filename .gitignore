@@ -1,26 +1,38 @@
-# Raw financial data
-raw_data/
-
-# Prepared datasets
-data_ready/
-
-# Trained models
-models/
-
-# Results generated automatically
-results/
-
-# Python
 __pycache__/
-*.pyc
-
-# Jupyter
-.ipynb_checkpoints/
-
-# Environment
-.env
+*.py[cod]
 .venv/
-
-# IDE
+venv/
+env/
+.env
+.ipynb_checkpoints/
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db
+
+data/
+data_ready/
+raw_data/
+*.parquet
+*.feather
+*.joblib
+*.pkl
+*.db
+*.sqlite
+*.sqlite3
+
+results/audits/*
+results/folds/*
+results/optuna/*
+results/models/*
+results/predictions/*
+results/metrics/*
+results/backtests/*
+results/figures/*
+results/manifests/*
+!results/**/.gitkeep
+
+logs/
+tmp/
+temp/
+*.log

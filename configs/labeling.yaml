@@ -1,0 +1,16 @@
+status: "draft_not_frozen"
+version: "draft-1"
+method: "triple_barrier"
+entry_column: "adj_last_price"
+high_column: "adj_high"
+low_column: "adj_low"
+upper_barrier: 0.08
+lower_barrier: -0.10
+max_holding_period: 30
+barrier_monitoring_starts: "next_trading_observation"
+same_bar_rule: "negative"
+vertical_barrier_rule:
+  positive_return: 1
+  zero_or_negative_return: 0
+censored_rule: "exclude"
+warning: "Do not use these parameters for model selection until formally frozen."
