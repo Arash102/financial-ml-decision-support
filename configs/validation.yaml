@@ -1,24 +1,29 @@
-status: "draft_not_frozen"
-
+status: stage_02_configured
 temporal_design:
-  train_end: "2021-03-20"
-  unseen_test_start: "2021-03-21"
-  unseen_test_end: "2024-09-22"
-
+  train_end: '2021-03-20'
+  unseen_test_start: '2021-03-21'
+  unseen_test_end: '2024-09-22'
+universe_freeze:
+  criteria_version: 1
+  selection_scope: train_only
+  minimum_train_observations: 600
+  maximum_train_end_gap_calendar_days: 45
+  maximum_train_critical_price_missing_fraction: 0.05
+  maximum_train_any_price_issue_fraction: 0.05
+  use_candidate_feature_missingness_for_selection: false
+  use_unseen_test_coverage_for_selection: false
 primary_validation:
-  method: "purged_anchored_walk_forward"
+  method: purged_anchored_walk_forward
   number_of_folds: 5
-  purge_method: "event_end_overlap"
+  purge_method: event_end_overlap
   embargo_trading_days: 30
-
 robustness_validation:
-  method: "cpcv"
+  method: cpcv
   enabled_during_primary_model_selection: false
-
 rules:
-  - "The unseen test must not be used for feature selection."
-  - "The unseen test must not be used for label design."
-  - "The unseen test must not be used for hyperparameter optimization."
-  - "The unseen test must not be used for algorithm selection."
-  - "The unseen test must not be used for threshold selection."
-  - "The unseen test must not be used for universe optimization."
+- The unseen test must not be used for feature selection.
+- The unseen test must not be used for label design.
+- The unseen test must not be used for hyperparameter optimization.
+- The unseen test must not be used for algorithm selection.
+- The unseen test must not be used for threshold selection.
+- The unseen test must not be used for universe optimization.
