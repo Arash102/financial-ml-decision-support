@@ -1,42 +1,41 @@
 # Methodology Decisions
 
-## Project objective
-Develop and evaluate leakage-controlled machine-learning models for generating
-stock-level decision-support signals in the Iranian capital market.
+## Stage 03: label reconstruction and censoring
 
-## Evidence boundary
-This repository contains the stock-modeling pipeline only. Customer-profile and
-trader-segmentation analyses are managed separately.
+### Target definition
 
-## Temporal design
-- Training and model-selection signal dates: on or before `2021-03-20`
-- Final unseen-test signal dates: `2021-03-21` through `2024-09-22`
+The target is reconstructed from adjusted price paths. The legacy `class` field is not reused. Each row is treated as a potential event start and receives an event end, outcome status, and eligibility status.
 
-The unseen test must not influence universe selection, feature selection, label
-design, missing-value policy, hyperparameter optimization, algorithm selection,
-threshold selection, or portfolio-rule selection.
+### Primary barrier scenario
 
-## Candidate algorithms
-- Random Forest
-- XGBoost
+The primary, pre-registered scenario is:
 
-## Baselines
-- Dummy Classifier
-- Logistic Regression
+- upper barrier: +15%
+- lower barrier: -15%
+- maximum holding period: 30 trading observations
+- monitoring begins on the next trading observation
+- same-bar upper/lower touch: negative outcome
+- unresolved event at observation 30: positive when the vertical return is greater than zero, otherwise negative
+- insufficient future observations: right-censored and excluded
 
-## Hyperparameter optimization
-- Optuna
-- 30 trials
-- No test-set access
+The primary scenario is retained from the previous strategy because it expresses a symmetric economic outcome. It is not chosen by unseen-test performance.
 
-## Validation
-- Primary: purged anchored walk-forward
-- Robustness: CPCV
+### Train-only sensitivity diagnostics
 
-## Notebook 01 decisions
-- Raw files are immutable source data.
-- Dates are parsed and sorted chronologically.
-- Duplicate dates are removed by keeping the last occurrence.
-- No missing-value imputation is performed.
-- Legacy target and future-derived fields are physically isolated.
-- Candidate features are not assumed leakage-free.
+Notebook 03 also evaluates the following alternatives on the train partition only:
+
+- +15% / -10%
+- +10% / -10%
+- +8% / -10%
+
+These comparisons are descriptive robustness diagnostics. The notebook does not automatically switch the target scenario to improve class balance or unseen-test behavior.
+
+### Partition isolation
+
+Train labels are completed only with train rows. Unseen-test rows are never used to resolve a train event. The unseen-test partition is labeled independently. Events near either partition boundary that lack the full horizon and do not touch a horizontal barrier are right-censored.
+
+### ZigZag and meta-labeling
+
+ZigZag is not used to create the Stage 03 target. The uploaded implementation records pivot confirmation and the `zigzag_up_new_2` / `zigzag_down_new_2` construction is intended to avoid using the most recent potentially unconfirmed pivot. A formal row-level timing audit remains part of Notebook 04.
+
+After that audit, confirmed ZigZag distance rules may define candidate long events. RF and XGBoost can then act as meta-models that decide whether to take or skip each candidate. This separation prevents the event filter from being confused with the target itself.

@@ -1,1 +1,1 @@
-"""Financial ML decision-support package."""
+"""Label construction utilities."""

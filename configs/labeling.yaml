@@ -1,16 +1,96 @@
-status: "draft_not_frozen"
-version: "draft-1"
-method: "triple_barrier"
+status: "stage_03_frozen"
+version: 2
+frozen_for_experiment: true
+method: "triple_barrier_binary"
+
 entry_column: "adj_last_price"
 high_column: "adj_high"
 low_column: "adj_low"
-upper_barrier: 0.08
-lower_barrier: -0.10
-max_holding_period: 30
+
+selected_scenario: "symmetric_15_15"
+scenario_selection_scope: "train_only"
+scenario_selection_mode: "pre_registered_primary_with_train_only_diagnostics"
+automatic_scenario_switching: false
+
+candidate_scenarios:
+  symmetric_15_15:
+    upper_barrier: 0.15
+    lower_barrier: -0.15
+    max_holding_period: 30
+    rationale: "Primary pre-registered target retained from the previous strategy; symmetric payoff and loss thresholds."
+
+  asymmetric_15_10:
+    upper_barrier: 0.15
+    lower_barrier: -0.10
+    max_holding_period: 30
+    rationale: "Sensitivity scenario with a tighter downside barrier."
+
+  symmetric_10_10:
+    upper_barrier: 0.10
+    lower_barrier: -0.10
+    max_holding_period: 30
+    rationale: "Sensitivity scenario with narrower symmetric barriers."
+
+  asymmetric_08_10:
+    upper_barrier: 0.08
+    lower_barrier: -0.10
+    max_holding_period: 30
+    rationale: "Sensitivity scenario matching the earlier draft configuration."
+
+holding_period_unit: "trading_observations"
 barrier_monitoring_starts: "next_trading_observation"
 same_bar_rule: "negative"
+
 vertical_barrier_rule:
+  return_measure: "entry_column_return"
   positive_return: 1
   zero_or_negative_return: 0
+
+barrier_label_rule:
+  upper_touch: 1
+  lower_touch: 0
+
 censored_rule: "exclude"
-warning: "Do not use these parameters for model selection until formally frozen."
+invalid_price_rule: "exclude"
+partition_rule: "label_train_and_unseen_test_independently"
+
+scenario_diagnostics:
+  compare_on_train_only: true
+  report_by_calendar_year: true
+  metrics:
+    - eligible_fraction
+    - positive_label_fraction
+    - horizontal_resolution_fraction
+    - upper_barrier_fraction
+    - lower_barrier_fraction
+    - vertical_barrier_fraction
+    - right_censored_fraction
+    - same_bar_double_touch_fraction
+    - median_holding_period_observations
+    - annual_positive_fraction_std
+    - annual_positive_fraction_range
+
+zigzag_policy:
+  used_to_construct_label: false
+  used_to_select_barrier_scenario: false
+  planned_role: "confirmed-event filter and primary long-side generator after Notebook 04"
+  meta_labeling_deferred_until_after_feature_audit: true
+  candidate_columns:
+    - "zigzag_up_new_2"
+    - "zigzag_down_new_2"
+  intended_filter_threshold_fraction: 0.15
+  confirmation_source: "collect.ipynb"
+  formal_row_level_audit_stage: "Notebook 04"
+
+methodological_notes:
+  - "Every row is labeled in Notebook 03; no ZigZag filter is applied at this stage."
+  - "The selected scenario is symmetric_15_15 and is not selected by unseen-test performance."
+  - "Alternative scenarios are compared descriptively on train only."
+  - "The entry row itself is not inspected for a barrier touch."
+  - "Upper and lower barriers are monitored from the next trading observation."
+  - "When both barriers are touched on the same bar, the conservative negative outcome is assigned."
+  - "When neither horizontal barrier is touched by observation 30, the vertical-barrier label is based on the entry-column return."
+  - "An event without 30 future observations is right-censored unless a horizontal barrier was already observed."
+  - "Train and unseen-test partitions are labeled independently."
+  - "Right-censored and invalid-price events remain in audit outputs but are excluded from model-eligible samples."
+  - "Confirmed ZigZag rules are evaluated later as event filters and meta-labeling side generators, not as part of the target definition."
