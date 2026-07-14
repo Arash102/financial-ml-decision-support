@@ -8,6 +8,7 @@ directories:
   train_data: "data_ready/train"
   unseen_test_data: "data_ready/unseen_test"
   labeled_data: "data_ready/labeled"
+  candidate_data: "data_ready/candidates"
   portfolio_data: "data_ready/portfolio"
 
 repository_results:

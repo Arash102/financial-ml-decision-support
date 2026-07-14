@@ -1,17 +1,45 @@
-# Confirmed ZigZag Source Review
+# ZigZag Confirmation Review
 
-Source reviewed: `collect.ipynb`.
+## Stage 04 decision
 
-SHA-256: `972956bae554bf1727b2ca343a0d9f785283c13f7dfeb245b6cc85b8322e7302`.
+The supplied collection code clearly contains a confirmation concept: pivot
+candidates receive a `confirmation_index`, and separate confirmation markers are
+created.
 
-The source implementation contains these safeguards:
+The audit also identified an important implementation distinction. The legacy
+`zigzag_up_new_2` and `zigzag_down_new_2` distance loop scans pivot markers
+(`zj`) and skips the first encountered pivot. It does not directly gate the
+selected pivot by the stored confirmation marker.
 
-1. The pivot search works on a chronological view of the input series.
-2. `find_confirmation` invalidates a candidate high when a later value exceeds it and invalidates a candidate low when a later value falls below it.
-3. A pivot receives a separate confirmation index only after the configured depth has elapsed without invalidation.
-4. The generated `zigzag_up_new_2` and `zigzag_down_new_2` features skip the most recent pivot and use an older structural point, which is intended to avoid relying on a currently unconfirmed pivot.
-5. The production call uses a 15% deviation threshold.
+Therefore Stage 04 does **not** use the legacy `new_2` columns as direct model
+features or as the primary event filter.
 
-This source review supports the intended non-repainting design, but it is not a substitute for a row-level data audit. Notebook 04 must still verify, for sampled and boundary observations, that every pivot contributing to a feature had a confirmation date no later than the feature date.
+Instead, Stage 04 reconstructs an online confirmation-gated ZigZag state:
 
-Notebook 03 therefore does not use ZigZag to define labels, select barrier parameters, or remove events.
+1. detect a local high or low using the original depth logic;
+2. assign the first confirmation observation after the original waiting rule;
+3. process confirmations in chronological order;
+4. require the minimum 15% deviation before accepting an opposite pivot;
+5. update the known state only at the confirmation observation;
+6. carry the latest confirmed high and low forward;
+7. audit prefix invariance by recomputing sampled historical prefixes.
+
+A pivot is never available before its confirmation observation.
+
+## Candidate long-event rule
+
+The primary threshold remains the pre-registered 15% Stage 03 rule:
+
+- the event is eligible under the frozen Triple-Barrier labeling policy;
+- a confirmed high and confirmed low are both available;
+- `0 <= distance_above_confirmed_low_fraction <= 0.15`;
+- `distance_below_confirmed_high_fraction >= 0.15`.
+
+The 10% and 20% thresholds are train-only sensitivity diagnostics. The notebook
+does not automatically select a threshold from label performance.
+
+## Meta-labeling interpretation
+
+The confirmation-gated ZigZag rule generates the primary long side. Within those
+candidate long events, the frozen Triple-Barrier label becomes the take/skip
+meta-label. RF and XGBoost are evaluated later as meta-models.

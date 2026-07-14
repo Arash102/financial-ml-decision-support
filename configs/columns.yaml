@@ -51,8 +51,99 @@ legacy_audit_optional:
 explicitly_excluded:
   - RSI_Signal
 
+feature_policy:
+  decision_timestamp: "end_of_day_after_current_bar_is_complete"
+  train_only_feature_approval: true
+  unseen_test_used_for_feature_approval: false
+  automatic_target_association_selection: false
+
+  context_only_price_features:
+    - adj_open
+    - adj_high
+    - adj_low
+    - adj_last_price
+
+  legacy_zigzag_columns:
+    - zigzag_up_new_2
+    - zigzag_down_new_2
+
+  base_model_candidates:
+    - EMA_3
+    - EMA_5
+    - EMA_8
+    - EMA_10
+    - EMA_12
+    - EMA_15
+    - EMA_30
+    - EMA_35
+    - EMA_40
+    - EMA_45
+    - EMA_50
+    - EMA_60
+    - EMA_200
+    - RSI_14
+    - macd
+    - power_of_buy
+    - volume_per_avg_month
+    - ho_buy
+    - ho_sell
+    - x
+    - y
+    - color
+    - gmma
+    - started
+    - body
+
+  prohibited_feature_name_patterns:
+    - "(^|_)label($|_)"
+    - "(^|_)class($|_)"
+    - "(^|_)target($|_)"
+    - "event_end"
+    - "event_return"
+    - "barrier"
+    - "censor"
+    - "future"
+    - "after_days"
+    - "max_price_find"
+    - "min_price_find"
+    - "days_max_find"
+
+  data_quality:
+    maximum_missing_fraction_for_approval: 0.50
+    reject_all_missing: true
+    reject_constant: true
+
+zigzag_audit:
+  source_reference: "collect.ipynb"
+  source_depth: 10
+  source_deviation_percent: 15.0
+  legacy_columns_are_direct_model_features: false
+  legacy_columns_are_primary_filter_inputs: false
+  audit_action: "reconstruct_confirmation_gated_state"
+  confirmation_gated_state_is_prefix_invariant: true
+
+candidate_event_filter:
+  role: "primary_long_side_generator_for_meta_labeling"
+  selection_scope: "train_only"
+  automatic_threshold_selection: false
+  primary_threshold_fraction: 0.15
+  sensitivity_threshold_fractions:
+    - 0.10
+    - 0.20
+  low_distance_column: "distance_above_confirmed_low_fraction"
+  high_distance_column: "distance_below_confirmed_high_fraction"
+  rules:
+    - "eligible_for_modeling must be true"
+    - "confirmed high and confirmed low must both be available"
+    - "0 <= distance_above_confirmed_low_fraction <= threshold"
+    - "distance_below_confirmed_high_fraction >= threshold"
+  meta_label_rule: "Within candidate long events, the frozen Triple-Barrier label is the take/skip meta-label."
+
 notes:
   - "Metadata columns are never model features."
   - "The legacy class column is not the new target."
   - "Legacy future-derived fields are isolated from model-ready files."
-  - "Candidate features remain subject to Notebook 04 leakage review."
+  - "Adjusted OHLC levels are retained for labeling, audit, and causal feature reconstruction but are not direct model inputs."
+  - "Legacy ZigZag new_2 columns are not trusted as direct model inputs or filter inputs in Stage 04."
+  - "Stage 04 reconstructs a confirmation-gated ZigZag state and audits prefix invariance."
+  - "The primary 15% filter threshold is pre-registered from Stage 03 and is not selected by unseen-test performance."
