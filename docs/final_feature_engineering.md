@@ -6,7 +6,7 @@ substantially across securities.
 
 ## Final semantic inputs
 
-There are 26 semantic inputs: 25 numeric and one categorical GMMA state.
+There are 35 semantic inputs: 34 numeric and one categorical GMMA state.
 
 ### Trend location
 Thirteen signed EMA distances:
@@ -102,3 +102,12 @@ is a computational continuity convention, not a literal observed volume or
 participant count. `log_power_of_buy` retains this lineage and applies a natural
 log transform to compress extreme ratios while preserving buyer-versus-seller
 direction.
+
+
+## Equal-weight market-regime extension
+
+Stage 04 v7 adds nine causal equal-weight market-regime inputs. They are built
+on one canonical market calendar pooled from repeated index fields in the frozen
+symbol raw files.
+
+See `docs/market_regime_feature_design.md`.

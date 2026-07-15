@@ -36,3 +36,26 @@ Two upstream collection conventions were explicitly retained and documented:
 The second rule is a computational continuity convention rather than a literal
 data observation. The final model uses `log_power_of_buy` so that the extreme
 ratio remains directional but its heavy tail is compressed.
+
+
+## Stage 04 v7 market-regime extension
+
+Nine explicit equal-weight market-regime features were added without changing
+the Triple-Barrier labels, confirmation-gated ZigZag, or 15% candidate rule.
+
+`market_close_location` uses:
+- ordinary range: `(close - low) / (high - low)`;
+- locked `high == low == close`, above previous market close: `1`;
+- locked, below previous market close: `0`;
+- locked, equal to previous market close: missing.
+
+
+## Stage 04 v8 market-calendar scope correction
+
+Market-index consistency and market-regime rolling features are evaluated only
+inside the frozen labeled-train feature horizon. The maximum labeled-train date
+is derived from the Stage 03 train files at runtime. Raw index observations
+after that date are excluded before canonicalization.
+
+This corrects an audit-scope error in v7; it does not relax the consistency
+tolerance and does not change any feature formula.

@@ -1,0 +1,17 @@
+{
+  "audit_rows": 8670,
+  "audit_dates": 2890,
+  "inconsistent_rows": 278,
+  "inconsistent_dates": 278,
+  "inconsistent_fields": [
+    "xNivInuClMresIbs"
+  ],
+  "first_inconsistent_date": "2025-01-07",
+  "last_inconsistent_date": "2026-07-01",
+  "maximum_absolute_spread": 9.800000000046566,
+  "median_absolute_spread": 0.6999999999534339,
+  "maximum_relative_spread": 9.129187316062308e-06,
+  "median_relative_spread": 7.553322795273821e-07,
+  "inconsistent_rows_on_or_before_nominal_train_cutoff": 0,
+  "inconsistent_rows_after_nominal_train_cutoff": 278
+}

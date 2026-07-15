@@ -10,11 +10,12 @@ import pandas as pd
 
 
 EMA_WINDOWS = (3, 5, 8, 10, 12, 15, 30, 35, 40, 45, 50, 60, 200)
-
 SHORT_EMA_WINDOWS = (3, 5, 8, 10, 12, 15)
 LONG_EMA_WINDOWS = (30, 35, 40, 45, 50, 60)
 
-FEATURE_ENGINEERING_SCHEMA_VERSION = "stage04_pooled_v5_pricechange_zigzag_provenance"
+FEATURE_ENGINEERING_SCHEMA_VERSION = (
+    "stage04_pooled_v7_market_regime_features"
+)
 
 RAW_REQUIRED_COLUMNS = (
     "dEven",
@@ -32,6 +33,31 @@ RAW_REQUIRED_COLUMNS = (
     "xNivInuClMresIbs",
 )
 
+MARKET_INDEX_REQUIRED_COLUMNS = (
+    "dEven",
+    "xNivInuClMresIbs",
+    "xNivInuPbMresIbs",
+    "xNivInuPhMresIbs",
+)
+
+MARKET_INDEX_VALUE_COLUMNS = (
+    "xNivInuClMresIbs",
+    "xNivInuPbMresIbs",
+    "xNivInuPhMresIbs",
+)
+
+MARKET_REGIME_NUMERIC_FEATURES = (
+    "market_return_1",
+    "market_return_5",
+    "market_return_20",
+    "market_volatility_20",
+    "market_ema_20_distance",
+    "market_ema_60_distance",
+    "market_range_fraction",
+    "market_close_location",
+    "market_drawdown_60",
+)
+
 ENGINEERED_NUMERIC_FEATURES = tuple(
     [f"ema_{window}_distance" for window in EMA_WINDOWS]
     + [
@@ -46,6 +72,7 @@ ENGINEERED_NUMERIC_FEATURES = tuple(
         "log_positive_rs_run_length",
         "body_ratio",
     ]
+    + list(MARKET_REGIME_NUMERIC_FEATURES)
 )
 
 CARRIED_STAGE04_NUMERIC_FEATURES = (
@@ -78,6 +105,11 @@ class FeatureEngineeringConfig:
     relative_strength_window: int = 12
     return_zscore_window: int = 12
     volume_window: int = 30
+    market_volatility_window: int = 20
+    market_ema_fast_window: int = 20
+    market_ema_slow_window: int = 60
+    market_drawdown_window: int = 60
+    market_index_consistency_relative_tolerance: float = 1e-10
 
 
 def parse_market_date(series: pd.Series) -> pd.Series:
@@ -111,7 +143,7 @@ def _numeric(frame: pd.DataFrame, columns: Iterable[str]) -> pd.DataFrame:
 
 
 def prepare_raw_feature_source(raw_frame: pd.DataFrame) -> pd.DataFrame:
-    """Normalize the immutable raw-data columns required by final features."""
+    """Normalize immutable stock-level raw columns required by final features."""
     missing = sorted(set(RAW_REQUIRED_COLUMNS) - set(raw_frame.columns))
     if missing:
         raise KeyError(f"Raw feature source is missing columns: {missing}")
@@ -126,20 +158,117 @@ def prepare_raw_feature_source(raw_frame: pd.DataFrame) -> pd.DataFrame:
     result = raw_frame[columns].copy()
     result["dEven"] = parse_market_date(result["dEven"])
 
-    numeric_columns = [
-        column
-        for column in columns
-        if column != "dEven"
-    ]
+    numeric_columns = [column for column in columns if column != "dEven"]
     result = _numeric(result, numeric_columns)
 
-    result = (
+    return (
         result.dropna(subset=["dEven"])
         .sort_values("dEven", kind="stable")
         .drop_duplicates(subset=["dEven"], keep="last")
         .reset_index(drop=True)
     )
-    return result
+
+
+def prepare_market_index_source(
+    raw_frame: pd.DataFrame,
+    *,
+    source_symbol: str,
+) -> pd.DataFrame:
+    """Extract equal-weight market-index observations from one raw symbol file."""
+    missing = sorted(
+        set(MARKET_INDEX_REQUIRED_COLUMNS) - set(raw_frame.columns)
+    )
+    if missing:
+        raise KeyError(
+            f"Market-index source is missing columns: {missing}"
+        )
+
+    result = raw_frame[list(MARKET_INDEX_REQUIRED_COLUMNS)].copy()
+    result["dEven"] = parse_market_date(result["dEven"])
+    result = _numeric(result, MARKET_INDEX_VALUE_COLUMNS)
+    result["source_symbol"] = str(source_symbol)
+
+    return (
+        result.dropna(subset=["dEven"])
+        .sort_values("dEven", kind="stable")
+        .drop_duplicates(subset=["dEven"], keep="last")
+        .reset_index(drop=True)
+    )
+
+
+def build_canonical_market_index(
+    market_observations: pd.DataFrame,
+    *,
+    relative_tolerance: float,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Pool repeated index observations before calculating rolling market features.
+
+    A stock file may omit dates when that individual security did not trade.
+    Therefore market returns/volatility cannot be calculated independently on
+    each stock's active-date sequence.
+    """
+    required = {
+        "dEven",
+        "source_symbol",
+        *MARKET_INDEX_VALUE_COLUMNS,
+    }
+    missing = sorted(required - set(market_observations.columns))
+    if missing:
+        raise KeyError(
+            f"Market observation panel is missing columns: {missing}"
+        )
+
+    panel = market_observations.copy()
+    panel["dEven"] = parse_market_date(panel["dEven"])
+    panel = _numeric(panel, MARKET_INDEX_VALUE_COLUMNS)
+    panel = panel.dropna(subset=["dEven"]).reset_index(drop=True)
+
+    audit_parts: list[pd.DataFrame] = []
+    canonical_parts: list[pd.Series] = []
+    grouped = panel.groupby("dEven", sort=True)
+
+    for column in MARKET_INDEX_VALUE_COLUMNS:
+        stats = grouped[column].agg(
+            nonmissing_source_rows="count",
+            minimum="min",
+            maximum="max",
+            canonical_value="median",
+        )
+
+        scale = stats["canonical_value"].abs().clip(lower=1.0)
+        stats["relative_spread"] = (
+            stats["maximum"] - stats["minimum"]
+        ).abs() / scale
+        stats["inconsistent_across_raw_files"] = (
+            stats["relative_spread"] > float(relative_tolerance)
+        )
+        stats["market_index_field"] = column
+        stats = stats.reset_index()
+
+        audit_parts.append(stats)
+        canonical_parts.append(
+            stats.set_index("dEven")["canonical_value"].rename(column)
+        )
+
+    consistency_audit = pd.concat(
+        audit_parts,
+        ignore_index=True,
+    ).sort_values(
+        ["dEven", "market_index_field"],
+        kind="stable",
+    ).reset_index(drop=True)
+
+    canonical = pd.concat(
+        canonical_parts,
+        axis=1,
+    ).reset_index()
+    canonical = canonical.sort_values(
+        "dEven",
+        kind="stable",
+    ).reset_index(drop=True)
+
+    return canonical, consistency_audit
 
 
 def _safe_ratio(
@@ -180,11 +309,7 @@ def _rolling_population_zscore(
     ).std(ddof=0)
 
     result = pd.Series(np.nan, index=numeric.index, dtype=float)
-    valid = (
-        numeric.notna()
-        & rolling_mean.notna()
-        & rolling_std.notna()
-    )
+    valid = numeric.notna() & rolling_mean.notna() & rolling_std.notna()
     nonzero_std = valid & rolling_std.gt(0)
     zero_std = valid & rolling_std.eq(0)
 
@@ -211,27 +336,10 @@ def _positive_run_length(values: pd.Series) -> pd.Series:
     return pd.Series(output, index=values.index, dtype=np.int64)
 
 
-
 def _build_body_ratio(
     frame: pd.DataFrame,
 ) -> tuple[pd.Series, dict[str, int]]:
-    """
-    Build the only intentionally unadjusted-price feature.
-
-    Ordinary bar:
-        (unadjusted last - unadjusted open)
-        / (unadjusted high - unadjusted low)
-
-    Locked price-limit bar:
-        high == low == open == last
-        +1 when raw `priceChange` is positive
-        -1 when raw `priceChange` is negative
-         0 when raw `priceChange` is zero
-
-    Locked-bar direction comes directly from the same-day raw market field
-    `priceChange`. No previous-day lookup and no structural-break guard are
-    used for this special case.
-    """
+    """Build the intentionally unadjusted-price stock candle feature."""
     raw_last = pd.to_numeric(frame["pDrCotVal"], errors="coerce")
     raw_open = pd.to_numeric(frame["priceFirst"], errors="coerce")
     raw_high = pd.to_numeric(frame["priceMax"], errors="coerce")
@@ -268,7 +376,6 @@ def _build_body_ratio(
     ordinary = valid_ohlc & raw_high.gt(raw_low)
 
     result = pd.Series(np.nan, index=frame.index, dtype=float)
-
     result.loc[ordinary] = (
         raw_last.loc[ordinary] - raw_open.loc[ordinary]
     ) / (
@@ -307,18 +414,205 @@ def _build_body_ratio(
     }
     return result, audit
 
-def build_final_feature_frame(
-    labeled_train_frame: pd.DataFrame,
-    raw_frame: pd.DataFrame,
+
+def build_market_regime_feature_frame(
+    canonical_market_index: pd.DataFrame,
     *,
     config: FeatureEngineeringConfig | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
-    """
-    Reconstruct the frozen pooled-model feature schema on train-only history.
+    """Build nine causal equal-weight market-regime features."""
+    config = config or FeatureEngineeringConfig()
 
-    The function is deterministic and causal. No target value or future event
-    metadata is used to construct a feature.
-    """
+    required = {"dEven", *MARKET_INDEX_VALUE_COLUMNS}
+    missing = sorted(required - set(canonical_market_index.columns))
+    if missing:
+        raise KeyError(
+            f"Canonical market index is missing columns: {missing}"
+        )
+
+    market = canonical_market_index[
+        ["dEven", *MARKET_INDEX_VALUE_COLUMNS]
+    ].copy()
+    market["dEven"] = parse_market_date(market["dEven"])
+    market = _numeric(market, MARKET_INDEX_VALUE_COLUMNS)
+    market = (
+        market.dropna(subset=["dEven"])
+        .sort_values("dEven", kind="stable")
+        .drop_duplicates(subset=["dEven"], keep="last")
+        .reset_index(drop=True)
+    )
+
+    close = market["xNivInuClMresIbs"]
+    low = market["xNivInuPbMresIbs"]
+    high = market["xNivInuPhMresIbs"]
+
+    feature_frame = pd.DataFrame({"dEven": market["dEven"]})
+
+    feature_frame["market_return_1"] = close.pct_change(
+        periods=1,
+        fill_method=None,
+    )
+    feature_frame["market_return_5"] = close.pct_change(
+        periods=5,
+        fill_method=None,
+    )
+    feature_frame["market_return_20"] = close.pct_change(
+        periods=20,
+        fill_method=None,
+    )
+
+    previous_close = close.shift(1)
+    log_return = pd.Series(np.nan, index=market.index, dtype=float)
+    valid_log_return = (
+        close.gt(0)
+        & previous_close.gt(0)
+        & np.isfinite(close)
+        & np.isfinite(previous_close)
+    )
+    log_return.loc[valid_log_return] = np.log(
+        close.loc[valid_log_return]
+        / previous_close.loc[valid_log_return]
+    )
+
+    feature_frame["market_volatility_20"] = log_return.rolling(
+        window=config.market_volatility_window,
+        min_periods=config.market_volatility_window,
+    ).std(ddof=0)
+
+    ema_fast = close.ewm(
+        span=config.market_ema_fast_window,
+        adjust=False,
+        min_periods=config.market_ema_fast_window,
+    ).mean()
+    ema_slow = close.ewm(
+        span=config.market_ema_slow_window,
+        adjust=False,
+        min_periods=config.market_ema_slow_window,
+    ).mean()
+
+    feature_frame["market_ema_20_distance"] = _safe_ratio(
+        close - ema_fast,
+        close,
+    )
+    feature_frame["market_ema_60_distance"] = _safe_ratio(
+        close - ema_slow,
+        close,
+    )
+
+    valid_market_ohlc = (
+        np.isfinite(close)
+        & np.isfinite(low)
+        & np.isfinite(high)
+        & close.gt(0)
+        & low.gt(0)
+        & high.gt(0)
+        & high.ge(low)
+        & close.ge(low)
+        & close.le(high)
+    )
+
+    feature_frame["market_range_fraction"] = np.nan
+    feature_frame.loc[
+        valid_market_ohlc,
+        "market_range_fraction",
+    ] = (
+        high.loc[valid_market_ohlc]
+        - low.loc[valid_market_ohlc]
+    ) / close.loc[valid_market_ohlc]
+
+    close_location = pd.Series(
+        np.nan,
+        index=market.index,
+        dtype=float,
+    )
+
+    ordinary_range = valid_market_ohlc & high.gt(low)
+    close_location.loc[ordinary_range] = (
+        close.loc[ordinary_range] - low.loc[ordinary_range]
+    ) / (
+        high.loc[ordinary_range] - low.loc[ordinary_range]
+    )
+
+    locked_market = (
+        valid_market_ohlc
+        & high.eq(low)
+        & high.eq(close)
+    )
+    locked_with_previous = locked_market & previous_close.notna()
+    locked_up = locked_with_previous & close.gt(previous_close)
+    locked_down = locked_with_previous & close.lt(previous_close)
+    locked_equal_previous = (
+        locked_with_previous & close.eq(previous_close)
+    )
+
+    close_location.loc[locked_up] = 1.0
+    close_location.loc[locked_down] = 0.0
+    close_location.loc[locked_equal_previous] = np.nan
+
+    feature_frame["market_close_location"] = close_location
+
+    rolling_max = close.rolling(
+        window=config.market_drawdown_window,
+        min_periods=config.market_drawdown_window,
+    ).max()
+    feature_frame["market_drawdown_60"] = _safe_ratio(
+        close,
+        rolling_max,
+    ) - 1.0
+
+    close_location_out_of_bounds = (
+        feature_frame["market_close_location"].notna()
+        & (
+            feature_frame["market_close_location"].lt(-1e-12)
+            | feature_frame["market_close_location"].gt(1.0 + 1e-12)
+        )
+    )
+    if close_location_out_of_bounds.any():
+        raise AssertionError(
+            "market_close_location left the [0, 1] interval."
+        )
+
+    range_negative = (
+        feature_frame["market_range_fraction"].notna()
+        & feature_frame["market_range_fraction"].lt(-1e-12)
+    )
+    if range_negative.any():
+        raise AssertionError(
+            "market_range_fraction contains negative values."
+        )
+
+    audit: dict[str, Any] = {
+        "market_calendar_rows": len(market),
+        "market_first_date": market["dEven"].min(),
+        "market_last_date": market["dEven"].max(),
+        "invalid_market_ohlc_rows": int((~valid_market_ohlc).sum()),
+        "locked_market_rows": int(locked_market.sum()),
+        "locked_market_up_rows": int(locked_up.sum()),
+        "locked_market_down_rows": int(locked_down.sum()),
+        "locked_market_equal_previous_rows": int(
+            locked_equal_previous.sum()
+        ),
+        "market_close_location_missing_rows": int(
+            feature_frame["market_close_location"].isna().sum()
+        ),
+    }
+
+    for feature in MARKET_REGIME_NUMERIC_FEATURES:
+        audit[f"{feature}_missing_rows"] = int(
+            feature_frame[feature].isna().sum()
+        )
+
+    return feature_frame, audit
+
+
+def build_final_feature_frame(
+    labeled_train_frame: pd.DataFrame,
+    raw_frame: pd.DataFrame,
+    market_feature_frame: pd.DataFrame,
+    *,
+    config: FeatureEngineeringConfig | None = None,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Build final stock and market features on train-only history."""
     config = config or FeatureEngineeringConfig()
 
     labeled = labeled_train_frame.copy()
@@ -345,6 +639,29 @@ def build_final_feature_frame(
 
     raw = prepare_raw_feature_source(raw_frame)
 
+    market_features = market_feature_frame.copy()
+    market_features["dEven"] = parse_market_date(
+        market_features["dEven"]
+    )
+    missing_market_features = sorted(
+        set(MARKET_REGIME_NUMERIC_FEATURES)
+        - set(market_features.columns)
+    )
+    if missing_market_features:
+        raise KeyError(
+            "Market feature frame is missing columns: "
+            f"{missing_market_features}"
+        )
+    market_features = (
+        market_features[
+            ["dEven", *MARKET_REGIME_NUMERIC_FEATURES]
+        ]
+        .dropna(subset=["dEven"])
+        .sort_values("dEven", kind="stable")
+        .drop_duplicates(subset=["dEven"], keep="last")
+        .reset_index(drop=True)
+    )
+
     merge_columns = [
         "dEven",
         "buy_I_Volume",
@@ -360,9 +677,6 @@ def build_final_feature_frame(
         "priceChange",
         "xNivInuClMresIbs",
     ]
-    for optional in ("structural_break", "adjustment_factor"):
-        if optional in raw.columns:
-            merge_columns.append(optional)
 
     merged = labeled.merge(
         raw[merge_columns],
@@ -371,7 +685,6 @@ def build_final_feature_frame(
         validate="one_to_one",
         indicator="_raw_join",
     )
-
     raw_join_missing_rows = int(merged["_raw_join"].ne("both").sum())
     merged = merged.drop(columns=["_raw_join"])
 
@@ -399,29 +712,23 @@ def build_final_feature_frame(
         {"dEven": merged["dEven"]},
         index=merged.index,
     )
-
     adjusted_last = merged["adj_last_price"]
 
-    # Price-level EMA values become dimensionless signed distances.
     for window in EMA_WINDOWS:
-        ema = merged[f"EMA_{window}"]
         feature_frame[f"ema_{window}_distance"] = _safe_ratio(
-            adjusted_last - ema,
+            adjusted_last - merged[f"EMA_{window}"],
             adjusted_last,
         )
 
-    # Bounded momentum.
     feature_frame["rsi_14_centered"] = (
         merged["RSI_14"] - 50.0
     ) / 50.0
 
-    # Price-unit MACD becomes dimensionless.
     feature_frame["macd_relative"] = _safe_ratio(
         merged["macd"],
         adjusted_last,
     )
 
-    # Individual buyer/seller power from raw client-type fields.
     valid_power = (
         merged["buy_I_Volume"].gt(0)
         & merged["buy_I_Count"].gt(0)
@@ -447,7 +754,6 @@ def build_final_feature_frame(
         "log_power_of_buy",
     ] = np.log(power_ratio.loc[valid_positive_power])
 
-    # Daily buy-side total volume and its causal 30-observation rolling mean.
     daily_total_volume = (
         merged["buy_I_Volume"] + merged["buy_N_Volume"]
     )
@@ -466,7 +772,6 @@ def build_final_feature_frame(
         "log_volume_ratio_30",
     ] = np.log1p(volume_ratio.loc[valid_volume_ratio])
 
-    # Institutional fractions are reconstructed independently on buy and sell.
     buy_total = merged["buy_I_Volume"] + merged["buy_N_Volume"]
     sell_total = merged["sell_I_Volume"] + merged["sell_N_Volume"]
 
@@ -479,7 +784,6 @@ def build_final_feature_frame(
         sell_total,
     )
 
-    # Corrected current-date stock-to-market relative-strength z-score.
     relative_strength_ratio = _safe_ratio(
         adjusted_last,
         merged["xNivInuClMresIbs"],
@@ -491,7 +795,6 @@ def build_final_feature_frame(
         )
     )
 
-    # Corrected standard one-observation return and current-date rolling z-score.
     daily_return = adjusted_last.pct_change(fill_method=None)
     feature_frame["y_return_zscore"] = _rolling_population_zscore(
         daily_return,
@@ -505,12 +808,24 @@ def build_final_feature_frame(
         positive_run_length.astype(float)
     )
 
-    # User-confirmed Iran-market microstructure feature on unadjusted prices.
-    # Locked-bar direction comes directly from same-day raw `priceChange`.
     body_ratio, body_audit = _build_body_ratio(merged)
     feature_frame["body_ratio"] = body_ratio
 
-    # GMMA state is categorical, not ordinal.
+    market_alignment = feature_frame[["dEven"]].merge(
+        market_features,
+        on="dEven",
+        how="left",
+        validate="one_to_one",
+        indicator="_market_join",
+    )
+    market_feature_join_missing_rows = int(
+        market_alignment["_market_join"].ne("both").sum()
+    )
+    market_alignment = market_alignment.drop(columns=["_market_join"])
+
+    for feature in MARKET_REGIME_NUMERIC_FEATURES:
+        feature_frame[feature] = market_alignment[feature].to_numpy()
+
     short_columns = [f"EMA_{window}" for window in SHORT_EMA_WINDOWS]
     long_columns = [f"EMA_{window}" for window in LONG_EMA_WINDOWS]
     short = merged[short_columns]
@@ -529,6 +844,7 @@ def build_final_feature_frame(
     audit: dict[str, Any] = {
         "rows": len(merged),
         "raw_join_missing_rows": raw_join_missing_rows,
+        "market_feature_join_missing_rows": market_feature_join_missing_rows,
         "invalid_power_source_rows": int((~valid_power).sum()),
         "power_feature_missing_rows": int(
             feature_frame["log_power_of_buy"].isna().sum()
@@ -577,128 +893,59 @@ def final_feature_schema() -> pd.DataFrame:
             }
         )
 
+    stock_rows = [
+        ("rsi_14_centered", "momentum", "RSI_14", "(RSI_14 - 50) / 50", "bounded index", "dimensionless", "adjusted"),
+        ("macd_relative", "momentum", "macd", "macd / adj_last_price", "price", "dimensionless", "adjusted"),
+        ("log_power_of_buy", "investor_behavior", "client-type fields from collection pipeline", "ln((buy_I_Volume/buy_I_Count)/(sell_I_Volume/sell_I_Count))", "ratio", "log ratio", "not price based"),
+        ("log_volume_ratio_30", "trading_activity", "raw buy volumes", "log1p(daily_total_volume / causal rolling_mean_30)", "volume ratio", "log ratio", "not price based"),
+        ("ho_buy_fraction", "investor_behavior", "raw client-type fields", "buy_N_Volume/(buy_I_Volume+buy_N_Volume)", "volume", "fraction", "not price based"),
+        ("ho_sell_fraction", "investor_behavior", "raw client-type fields", "sell_N_Volume/(sell_I_Volume+sell_N_Volume)", "volume", "fraction", "not price based"),
+        ("x_relative_strength_zscore", "relative_market_position", "adjusted price and equal-weight index close", "current stock/index ratio z-score over 12 observations", "ratio", "z-score", "adjusted stock price"),
+        ("y_return_zscore", "relative_market_position", "adj_last_price", "current standard return z-score over 12 returns", "return", "z-score", "adjusted"),
+        ("log_positive_rs_run_length", "relative_market_position", "x_relative_strength_zscore", "log1p(consecutive observations with x > 0)", "observation count", "log count", "derived"),
+        ("body_ratio", "price_action", "pDrCotVal, priceFirst, priceMax, priceMin, priceChange", "unadjusted signed body/range; locked-bar direction from same-day priceChange (+1/-1/0)", "unadjusted price", "dimensionless", "unadjusted"),
+    ]
+    for feature, group, source, transform, unit_before, unit_after, basis in stock_rows:
+        rows.append(
+            {
+                "feature": feature,
+                "semantic_group": group,
+                "source_feature": source,
+                "transformation": transform,
+                "unit_before": unit_before,
+                "unit_after": unit_after,
+                "data_type": "numeric",
+                "price_basis": basis,
+            }
+        )
+
+    market_rows = [
+        ("market_return_1", "equal-weight index close", "I_t / I_(t-1) - 1", "return"),
+        ("market_return_5", "equal-weight index close", "I_t / I_(t-5) - 1", "return"),
+        ("market_return_20", "equal-weight index close", "I_t / I_(t-20) - 1", "return"),
+        ("market_volatility_20", "equal-weight index close", "population std of 20 causal one-day log returns", "log-return volatility"),
+        ("market_ema_20_distance", "equal-weight index close", "(I_t - EMA20_t) / I_t", "dimensionless"),
+        ("market_ema_60_distance", "equal-weight index close", "(I_t - EMA60_t) / I_t", "dimensionless"),
+        ("market_range_fraction", "equal-weight index high/low/close", "(index_high - index_low) / index_close", "fraction"),
+        ("market_close_location", "equal-weight index high/low/close", "(close-low)/(high-low); locked high==low==close: up vs previous close => 1, down => 0", "bounded location"),
+        ("market_drawdown_60", "equal-weight index close", "I_t / rolling_max_60(I) - 1", "drawdown fraction"),
+    ]
+    for feature, source, transform, unit_after in market_rows:
+        rows.append(
+            {
+                "feature": feature,
+                "semantic_group": "market_regime",
+                "source_feature": source,
+                "transformation": transform,
+                "unit_before": "equal-weight index level",
+                "unit_after": unit_after,
+                "data_type": "numeric",
+                "price_basis": "market index",
+            }
+        )
+
     rows.extend(
         [
-            {
-                "feature": "rsi_14_centered",
-                "semantic_group": "momentum",
-                "source_feature": "RSI_14",
-                "transformation": "(RSI_14 - 50) / 50",
-                "unit_before": "bounded index",
-                "unit_after": "dimensionless",
-                "data_type": "numeric",
-                "price_basis": "adjusted",
-            },
-            {
-                "feature": "macd_relative",
-                "semantic_group": "momentum",
-                "source_feature": "macd",
-                "transformation": "macd / adj_last_price",
-                "unit_before": "price",
-                "unit_after": "dimensionless",
-                "data_type": "numeric",
-                "price_basis": "adjusted",
-            },
-            {
-                "feature": "log_power_of_buy",
-                "semantic_group": "investor_behavior",
-                "source_feature": "raw client-type fields",
-                "transformation": (
-                    "ln((buy_I_Volume/buy_I_Count)"
-                    "/(sell_I_Volume/sell_I_Count))"
-                ),
-                "unit_before": "ratio",
-                "unit_after": "log ratio",
-                "data_type": "numeric",
-                "price_basis": "not price based",
-            },
-            {
-                "feature": "log_volume_ratio_30",
-                "semantic_group": "trading_activity",
-                "source_feature": "raw buy volumes",
-                "transformation": (
-                    "log1p(daily_total_volume / causal rolling_mean_30)"
-                ),
-                "unit_before": "volume ratio",
-                "unit_after": "log ratio",
-                "data_type": "numeric",
-                "price_basis": "not price based",
-            },
-            {
-                "feature": "ho_buy_fraction",
-                "semantic_group": "investor_behavior",
-                "source_feature": "raw client-type fields",
-                "transformation": (
-                    "buy_N_Volume/(buy_I_Volume+buy_N_Volume)"
-                ),
-                "unit_before": "volume",
-                "unit_after": "fraction",
-                "data_type": "numeric",
-                "price_basis": "not price based",
-            },
-            {
-                "feature": "ho_sell_fraction",
-                "semantic_group": "investor_behavior",
-                "source_feature": "raw client-type fields",
-                "transformation": (
-                    "sell_N_Volume/(sell_I_Volume+sell_N_Volume)"
-                ),
-                "unit_before": "volume",
-                "unit_after": "fraction",
-                "data_type": "numeric",
-                "price_basis": "not price based",
-            },
-            {
-                "feature": "x_relative_strength_zscore",
-                "semantic_group": "relative_market_position",
-                "source_feature": "adjusted price and market index",
-                "transformation": (
-                    "current stock/index ratio z-score over 12 observations"
-                ),
-                "unit_before": "ratio",
-                "unit_after": "z-score",
-                "data_type": "numeric",
-                "price_basis": "adjusted stock price",
-            },
-            {
-                "feature": "y_return_zscore",
-                "semantic_group": "relative_market_position",
-                "source_feature": "adj_last_price",
-                "transformation": (
-                    "current standard return z-score over 12 returns"
-                ),
-                "unit_before": "return",
-                "unit_after": "z-score",
-                "data_type": "numeric",
-                "price_basis": "adjusted",
-            },
-            {
-                "feature": "log_positive_rs_run_length",
-                "semantic_group": "relative_market_position",
-                "source_feature": "x_relative_strength_zscore",
-                "transformation": (
-                    "log1p(consecutive observations with x > 0)"
-                ),
-                "unit_before": "observation count",
-                "unit_after": "log count",
-                "data_type": "numeric",
-                "price_basis": "derived",
-            },
-            {
-                "feature": "body_ratio",
-                "semantic_group": "price_action",
-                "source_feature": (
-                    "pDrCotVal, priceFirst, priceMax, priceMin, priceChange"
-                ),
-                "transformation": (
-                    "unadjusted signed body/range; locked-bar direction "
-                    "from same-day priceChange (+1/-1/0)"
-                ),
-                "unit_before": "unadjusted price",
-                "unit_after": "dimensionless",
-                "data_type": "numeric",
-                "price_basis": "unadjusted",
-            },
             {
                 "feature": "gmma_state",
                 "semantic_group": "ema_structure",
