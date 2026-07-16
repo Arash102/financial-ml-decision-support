@@ -59,3 +59,13 @@ after that date are excluded before canonicalization.
 
 This corrects an audit-scope error in v7; it does not relax the consistency
 tolerance and does not change any feature formula.
+## Stage 05 v2 validation-window balance revision
+
+The original equal-trading-date validation partition produced highly unequal
+candidate counts across folds. The revised primary design preserves chronology,
+contiguity, anchored training, the 30-trading-day pre-validation gap, and
+event-end purging, but chooses validation boundary dates from cumulative
+candidate-event start-date counts.
+
+No target label or event outcome is used to set the boundaries. Class balance
+is reported only after boundary freezing.

@@ -1,53 +1,49 @@
-# Stage 05 — Purged Anchored Walk-Forward Design
+# Stage 05 v2 — Candidate-event-count-balanced purged anchored walk-forward
 
-## Frozen input
+## Objective
 
-Stage 05 uses only the primary long candidate events created by Stage 04 with
-the confirmation-gated ZigZag and the pre-registered 15% filter.
+Freeze the five primary model-selection folds before Notebook 06 while reducing
+the extreme validation-size imbalance observed in the first calendar-equal
+design.
 
-The analyst manually spot-checked the reconstructed ZigZag distances against
-price data before accepting the new confirmation-gated ZigZag as the project
-baseline.
+## What is balanced
 
-## Calendar design
+Only the number of Stage 04 primary candidate events is used to select
+validation boundary dates.
 
-Fold boundaries are defined on the unique train-only trading calendar collected
-from the frozen labeled-train files. All candidate events sharing the same
-event-start date stay on the same side of a fold boundary.
+`meta_label`, positive-label fraction, event return, barrier outcome, and every
+other event outcome are excluded from boundary construction.
 
-The first validation block begins after 50% of the train-only trading calendar.
-The remaining calendar is divided into five contiguous validation windows of
-approximately equal numbers of trading dates.
+## Calendar architecture
 
-## Anchored training
+1. Build one frozen train-only trading calendar from Stage 03 labeled-train dates.
+2. Preserve the pre-registered first validation start at 50% of train-only
+   trading dates.
+3. Count primary Stage 04 candidate-event starts on each frozen calendar date.
+4. Inside the remaining validation horizon, choose contiguous date boundaries
+   nearest cumulative 20%, 40%, 60%, 80%, and 100% candidate-event targets.
+5. Keep all candidate events sharing one start date together.
+6. Place a 30-trading-day conservative gap immediately before every validation
+   block.
+7. Retain historical training events only when their start is on or before the
+   pre-gap train end and their event end is strictly before validation start.
 
-For fold `k`, the training history is all eligible historical candidate events
-available before that fold's validation block, subject to purge and embargo
-controls. The historical training set grows forward through time.
+## Why the event counts are approximate
 
-## Conservative embargo gap
+A calendar date is indivisible. If one date contains many candidate events, the
+boundary cannot split those events across folds. Therefore the deterministic
+algorithm chooses the admissible calendar boundary nearest the cumulative equal-
+event target.
 
-A 30-trading-day gap is placed immediately before each validation block.
-Candidate events whose start dates fall inside this gap are excluded from the
-training set for that fold.
+## Why label stratification is prohibited
 
-This is implemented as a conservative pre-validation temporal gap. The exact
-semantics are recorded in `configs/validation.yaml`.
+Temporal class imbalance may itself be evidence of a market regime. Moving
+dates after observing `meta_label` would smooth away the nonstationarity that
+the model must face and would make the validation design outcome-informed.
 
-## Event-end purging
+Class prevalence is therefore audited only after fold boundaries are frozen.
 
-A historical event is excluded from training when:
+## Stage 06 contract
 
-`event_end_date >= validation_start_date`
-
-Therefore no retained training label interval reaches the validation period.
-
-## Stage 05 does not fit a model
-
-This notebook freezes calendar boundaries and audits leakage controls. Model
-selection starts in Notebook 06.
-
-## Unseen-test isolation
-
-The unseen-test partition is not opened or used for fold construction, class
-balance decisions, algorithm selection, or hyperparameter optimization.
+Notebook 06 must consume the Stage 05 v2 boundaries as-is. Optuna, model
+families, fold metrics, and OOF results may not redesign these boundaries.

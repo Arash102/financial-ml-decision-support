@@ -295,3 +295,86 @@ def audit_validation_window_overlap(
             )
 
     return pd.DataFrame(rows)
+
+
+
+def audit_validation_event_count_balance(
+    panel: pd.DataFrame,
+    folds: list[WalkForwardFold],
+) -> pd.DataFrame:
+    """Audit approximate event-count balance without using target labels."""
+    rows: list[dict[str, object]] = []
+
+    total_validation_events = 0
+    target_values: list[float] = []
+
+    for fold in folds:
+        masks = fold_membership_masks(panel, fold)
+        actual_events = int(masks.validation.sum())
+        total_validation_events += actual_events
+        target_values.append(
+            float(fold.validation_target_candidate_events)
+        )
+
+        rows.append(
+            {
+                "fold_id": fold.fold_id,
+                "validation_start_date": fold.validation_start_date,
+                "validation_end_date": fold.validation_end_date,
+                "target_candidate_events": float(
+                    fold.validation_target_candidate_events
+                ),
+                "actual_candidate_events": actual_events,
+                "absolute_deviation_from_target": abs(
+                    actual_events
+                    - float(fold.validation_target_candidate_events)
+                ),
+                "signed_deviation_from_target": (
+                    actual_events
+                    - float(fold.validation_target_candidate_events)
+                ),
+                "relative_deviation_from_target": (
+                    (
+                        actual_events
+                        - float(fold.validation_target_candidate_events)
+                    )
+                    / float(fold.validation_target_candidate_events)
+                    if fold.validation_target_candidate_events > 0
+                    else np.nan
+                ),
+                "validation_unique_start_dates": int(
+                    panel.loc[masks.validation, "dEven"].nunique()
+                ),
+                "boundary_used_meta_label": False,
+            }
+        )
+
+    result = pd.DataFrame(rows)
+
+    if len(result):
+        event_counts = result["actual_candidate_events"].astype(float)
+        mean_events = float(event_counts.mean())
+        std_events = float(event_counts.std(ddof=0))
+
+        result["all_fold_event_count_mean"] = mean_events
+        result["all_fold_event_count_std"] = std_events
+        result["all_fold_event_count_cv"] = (
+            std_events / mean_events
+            if mean_events > 0
+            else np.nan
+        )
+        result["all_fold_event_count_min"] = int(event_counts.min())
+        result["all_fold_event_count_max"] = int(event_counts.max())
+        result["all_fold_max_to_min_ratio"] = (
+            float(event_counts.max() / event_counts.min())
+            if event_counts.min() > 0
+            else np.nan
+        )
+        result["total_validation_candidate_events"] = (
+            total_validation_events
+        )
+        result["common_target_candidate_events"] = (
+            float(np.mean(target_values))
+        )
+
+    return result
