@@ -1,16 +1,63 @@
-n_trials: 30
-direction: "maximize"
-sampler: "TPESampler"
-pruner: "MedianPruner"
-seed: 20260713
-storage: "sqlite:///results/optuna/financial_ml_optuna.sqlite3"
-load_if_exists: true
-
+status: stage_06_configured_v3
+reproducibility:
+  random_seed: 1729
+optimization:
+  tuned_models:
+  - random_forest
+  - xgboost
+  required_complete_trials_per_model: 30
+  required_trial_state: COMPLETE
+  direction: maximize
+  n_jobs: 1
+  gc_after_trial: true
+  every_trial_evaluates_all_folds: true
+sampler:
+  name: TPESampler
+  multivariate: true
+  separate_instance_per_study: true
+pruner:
+  name: NopPruner
+  pruning_enabled: false
 objective:
-  primary_metric: "average_precision"
-  stability_penalty_weight: 0.25
-
+  name: equal_fold_mean_roc_auc
+  primary_metric: roc_auc
+  fold_weighting: equal
+  formula: mean_fold_roc_auc
+  probability_threshold_for_diagnostics: 0.5
+  threshold_selection_performed: false
+  threshold_selection_deferred: true
+hierarchical_trial_selection:
+  step_1: find_best_mean_fold_roc_auc
+  near_best_mean_auc_tolerance: 0.005
+  step_2: within_near_best_mean_band_maximize_worst_fold_roc_auc
+  step_3: minimize_fold_roc_auc_std
+  step_4: lower_trial_number
+model_selection:
+  eligible_primary_models:
+  - random_forest
+  - xgboost
+  baselines:
+  - dummy_prior
+  - logistic_regression
+  near_best_mean_auc_tolerance: 0.005
+  primary_rule: same_hierarchical_auc_rule_as_trial_selection
+  equal_fold_weighting: true
+  pooled_row_weighted_metric_used_for_selection: false
+storage:
+  database_file: results/optuna/06_optuna_studies.sqlite3
+  resume_existing_study: true
 rules:
-  - "Optimization is restricted to pre-test training data."
-  - "Every trial must be persisted."
-  - "Pruned and failed trials must remain auditable."
+- Use only Stage 04 primary long candidate events.
+- Consume the frozen Stage 05 v2 folds without redesign.
+- Compute average uniqueness separately inside each fold from that fold's training
+  events only.
+- Compute concurrency within symbol, never across unrelated securities.
+- Do not allow validation-event presence to alter fold-training sample weights.
+- Fit all imputers and scalers inside each fold training partition.
+- Run 30 COMPLETE trials for each tuned model.
+- Disable pruning; every trial must evaluate all five folds.
+- Optimize mean fold ROC AUC, then apply the frozen mean/worst/std hierarchy.
+- Do not use the unseen test for model selection or threshold selection.
+- Do not optimize raw accuracy.
+- Do not select a trading threshold in Notebook 06.
+- Save walk-forward validation probabilities for later train-only threshold analysis.

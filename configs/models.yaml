@@ -1,23 +1,124 @@
-primary_models:
-  random_forest:
-    enabled: true
-    random_state: 20260713
-    n_jobs: -1
-  xgboost:
-    enabled: true
-    random_state: 20260713
-    n_jobs: -1
-    tree_method: "hist"
-
+status: stage_06_configured_v3
+common:
+  random_seed: 1729
+  probability_threshold_for_diagnostics: 0.5
+sample_weighting:
+  method: average_uniqueness
+  schema_version: stage06_v3_fold_local_within_symbol_average_uniqueness
+  source_scope: current_fold_training_events_only
+  concurrency_scope: within_symbol
+  active_interval_rule: event_start_date <= trading_observation <= event_end_date
+  interval_endpoints_inclusive: true
+  normalization: divide_by_fold_train_mean_raw_uniqueness
+  normalized_weight_mean: 1.0
+  validation_events_used_to_compute_weights: false
+  validation_metrics_weighted: false
+  applied_models:
+  - logistic_regression
+  - random_forest
+  - xgboost
+  dummy_prior_weighted: false
+  return_attribution_multiplier_used: false
+  sequential_bootstrap_used_in_primary_selection: false
 baselines:
-  dummy_classifier:
-    enabled: true
-    strategy: "prior"
+  dummy_prior:
+    strategy: prior
+    average_uniqueness_weighting: false
   logistic_regression:
-    enabled: true
-    max_iter: 2000
-    random_state: 20260713
-
-selection:
-  use_unseen_test: false
-  probability_threshold_source: "out_of_fold_predictions"
+    solver: lbfgs
+    C: 1.0
+    max_iter: 3000
+    class_weight: balanced
+    average_uniqueness_weighting: true
+random_forest:
+  fixed:
+    n_jobs: -1
+    random_state_from_common_seed: true
+    average_uniqueness_weighting: true
+  search_space:
+    n_estimators:
+      low: 25
+      high: 150
+      step: 25
+    max_depth:
+      low: 3
+      high: 15
+    min_samples_split:
+      low: 2
+      high: 30
+    min_samples_leaf:
+      low: 1
+      high: 20
+    max_features:
+      values:
+      - sqrt
+      - log2
+      - 0.5
+      - 0.75
+    criterion:
+      values:
+      - gini
+      - entropy
+      - log_loss
+    bootstrap:
+      values:
+      - true
+      - false
+    max_samples:
+      low: 0.6
+      high: 1.0
+      sampled_for_all_trials: true
+      ignored_when_bootstrap_is_false: true
+    class_weight:
+      values:
+      - none
+      - balanced_subsample
+xgboost:
+  fixed:
+    objective: binary:logistic
+    eval_metric: logloss
+    tree_method: hist
+    n_jobs: -1
+    random_state_from_common_seed: true
+    verbosity: 0
+    average_uniqueness_weighting: true
+  search_space:
+    n_estimators:
+      low: 25
+      high: 150
+      step: 25
+    max_depth:
+      low: 2
+      high: 15
+    learning_rate:
+      low: 0.01
+      high: 0.2
+      log: true
+    min_child_weight:
+      low: 0.1
+      high: 20.0
+      log: true
+    subsample:
+      low: 0.6
+      high: 1.0
+    colsample_bytree:
+      low: 0.5
+      high: 1.0
+    gamma:
+      low: 0.0
+      high: 5.0
+    reg_alpha:
+      low: 1.0e-08
+      high: 10.0
+      log: true
+    reg_lambda:
+      low: 0.001
+      high: 100.0
+      log: true
+    max_delta_step:
+      low: 0
+      high: 5
+    class_weight_mode:
+      values:
+      - none
+      - fold_weighted_ratio
