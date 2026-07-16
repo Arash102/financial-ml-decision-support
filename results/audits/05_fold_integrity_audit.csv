@@ -1,0 +1,6 @@
+﻿fold_id,train_event_ids_in_validation,train_validation_event_start_date_overlap,train_start_after_train_end,train_event_end_on_or_after_validation_start,validation_before_validation_start,validation_after_validation_end,embargo_events_in_train,purged_events_in_train,train_has_both_classes,validation_has_both_classes
+1,0,0,0,0,0,0,0,0,True,True
+2,0,0,0,0,0,0,0,0,True,True
+3,0,0,0,0,0,0,0,0,True,True
+4,0,0,0,0,0,0,0,0,True,True
+5,0,0,0,0,0,0,0,0,True,True

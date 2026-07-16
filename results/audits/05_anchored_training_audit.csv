@@ -1,0 +1,6 @@
+﻿previous_fold_id,current_fold_id,anchored_subset_ok,previous_train_events_missing_from_current,current_train_events
+,1,True,0,62717
+1.0,2,True,0,73590
+2.0,3,True,0,83825
+3.0,4,True,0,94059
+4.0,5,True,0,107360
