@@ -46,6 +46,7 @@ def compute_fold_train_average_uniqueness(
     symbol_column: str = "symbol",
     event_start_column: str = "dEven",
     event_end_column: str = "event_end_date",
+    weight_source_scope: str = "current_fold_training_events_only",
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Compute average uniqueness from the supplied event population only.
@@ -239,8 +240,8 @@ def compute_fold_train_average_uniqueness(
         symbol_result["symbol_max_concurrency"] = int(
             concurrency.max()
         )
-        symbol_result["weight_source_scope"] = (
-            "current_fold_training_events_only"
+        symbol_result["weight_source_scope"] = str(
+            weight_source_scope
         )
         symbol_result["concurrency_scope"] = "within_symbol"
         symbol_result["interval_endpoints_inclusive"] = True
@@ -419,4 +420,94 @@ def summarize_fold_average_uniqueness(
         "weight_source_scope": "current_fold_training_events_only",
         "concurrency_scope": "within_symbol",
         "normalization": "fold_train_mean_one",
+    }
+
+
+def compute_full_train_average_uniqueness(
+    events: pd.DataFrame,
+    symbol_calendars: Mapping[str, pd.DatetimeIndex],
+    *,
+    event_id_column: str = "event_id",
+    symbol_column: str = "symbol",
+    event_start_column: str = "dEven",
+    event_end_column: str = "event_end_date",
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Compute within-symbol Average Uniqueness on full eligible train events."""
+    return compute_fold_train_average_uniqueness(
+        events,
+        symbol_calendars,
+        event_id_column=event_id_column,
+        symbol_column=symbol_column,
+        event_start_column=event_start_column,
+        event_end_column=event_end_column,
+        weight_source_scope=(
+            "complete_eligible_train_candidate_population"
+        ),
+    )
+
+
+def summarize_average_uniqueness_population(
+    weights: pd.DataFrame,
+    *,
+    population_id: str,
+    validation_events_used: int = 0,
+    unseen_test_events_used: int = 0,
+) -> dict[str, object]:
+    """Summarize one complete Average Uniqueness population."""
+    required = {
+        "event_id",
+        "symbol",
+        "average_uniqueness_raw",
+        "sample_weight",
+        "event_duration_observations",
+        "symbol_max_concurrency",
+        "weight_source_scope",
+    }
+    missing = sorted(required - set(weights.columns))
+    if missing:
+        raise KeyError(f"Weight table is missing columns: {missing}")
+    if weights.empty:
+        raise ValueError("Average Uniqueness weight table is empty.")
+
+    raw = weights["average_uniqueness_raw"].to_numpy(dtype=float)
+    normalized = weights["sample_weight"].to_numpy(dtype=float)
+    scopes = weights["weight_source_scope"].astype(str).unique().tolist()
+    if len(scopes) != 1:
+        raise AssertionError("Weight table has more than one source scope.")
+
+    ess = effective_sample_size(normalized)
+    return {
+        "population_id": str(population_id),
+        "events": int(len(weights)),
+        "symbols": int(weights["symbol"].nunique()),
+        "minimum_raw_average_uniqueness": float(raw.min()),
+        "mean_raw_average_uniqueness": float(raw.mean()),
+        "median_raw_average_uniqueness": float(np.median(raw)),
+        "maximum_raw_average_uniqueness": float(raw.max()),
+        "minimum_sample_weight": float(normalized.min()),
+        "mean_sample_weight": float(normalized.mean()),
+        "maximum_sample_weight": float(normalized.max()),
+        "sum_sample_weight": float(normalized.sum()),
+        "effective_sample_size": float(ess),
+        "effective_sample_fraction": float(ess / len(normalized)),
+        "minimum_event_duration_observations": int(
+            weights["event_duration_observations"].min()
+        ),
+        "median_event_duration_observations": float(
+            weights["event_duration_observations"].median()
+        ),
+        "maximum_event_duration_observations": int(
+            weights["event_duration_observations"].max()
+        ),
+        "maximum_symbol_concurrency": int(
+            weights["symbol_max_concurrency"].max()
+        ),
+        "nonfinite_raw_uniqueness": int((~np.isfinite(raw)).sum()),
+        "nonfinite_sample_weight": int((~np.isfinite(normalized)).sum()),
+        "nonpositive_sample_weight": int((normalized <= 0.0).sum()),
+        "validation_events_used": int(validation_events_used),
+        "unseen_test_events_used": int(unseen_test_events_used),
+        "weight_source_scope": scopes[0],
+        "concurrency_scope": "within_symbol",
+        "normalization": "full_train_mean_one",
     }
