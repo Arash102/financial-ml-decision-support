@@ -1,0 +1,48 @@
+{
+  "study_signature": "4e825015bd22",
+  "random_seed": 1729,
+  "selection_rule": [
+    "identify_best_mean_fold_roc_auc",
+    "retain_candidates_within_0.005_of_best_mean",
+    "maximize_worst_fold_roc_auc",
+    "minimize_fold_roc_auc_std",
+    "deterministic_final_tie_break"
+  ],
+  "near_best_mean_auc_tolerance": 0.005,
+  "random_forest": {
+    "selected_trial_number": 16,
+    "mean_roc_auc": 0.5306366145467984,
+    "min_roc_auc": 0.4896235118801095,
+    "std_roc_auc": 0.03880607193846436,
+    "params": {
+      "n_estimators": 125,
+      "max_depth": 3,
+      "min_samples_split": 11,
+      "min_samples_leaf": 20,
+      "max_features": 0.5,
+      "criterion": "log_loss",
+      "bootstrap": true,
+      "max_samples": 0.600348748572822,
+      "class_weight_mode": "balanced_subsample"
+    }
+  },
+  "xgboost": {
+    "selected_trial_number": 25,
+    "mean_roc_auc": 0.5487967820210273,
+    "min_roc_auc": 0.4853846305916497,
+    "std_roc_auc": 0.06069149378648962,
+    "params": {
+      "n_estimators": 150,
+      "max_depth": 2,
+      "learning_rate": 0.1628546104452258,
+      "min_child_weight": 2.0143619867929425,
+      "subsample": 0.7405393416048935,
+      "colsample_bytree": 0.7110250582730073,
+      "gamma": 4.373925301972639,
+      "reg_alpha": 1.1918704239785168e-06,
+      "reg_lambda": 1.6546398167660827,
+      "max_delta_step": 0,
+      "class_weight_mode": "none"
+    }
+  }
+}

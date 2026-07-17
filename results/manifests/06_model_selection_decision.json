@@ -1,0 +1,43 @@
+{
+  "primary_selected_model": "xgboost",
+  "challenger_model": "random_forest",
+  "selection_scope": [
+    "random_forest",
+    "xgboost"
+  ],
+  "optuna_objective": "equal_fold_mean_roc_auc",
+  "near_best_mean_auc_tolerance": 0.005,
+  "hierarchical_rule": [
+    "identify_best_mean_fold_roc_auc",
+    "retain_candidates_within_0.005_of_best_mean",
+    "maximize_worst_fold_roc_auc",
+    "minimize_fold_roc_auc_std",
+    "deterministic_final_tie_break"
+  ],
+  "selected_trial_numbers": {
+    "random_forest": 16,
+    "xgboost": 25
+  },
+  "fold_weighting": "equal",
+  "average_uniqueness_weighting": {
+    "method": "average_uniqueness",
+    "scope": "current_fold_training_events_only",
+    "concurrency": "within_symbol",
+    "weighted_models": [
+      "logistic_regression",
+      "random_forest",
+      "xgboost"
+    ],
+    "dummy_prior_weighted": false,
+    "validation_metrics_weighted": false
+  },
+  "diagnostic_threshold": 0.5,
+  "threshold_selected": false,
+  "selected_tree_mean_roc_auc": 0.5487967820210273,
+  "selected_tree_min_roc_auc": 0.4853846305916497,
+  "selected_tree_std_roc_auc": 0.06069149378648962,
+  "logistic_baseline_mean_roc_auc": 0.5180371895159395,
+  "logistic_baseline_min_roc_auc": 0.4500478061150257,
+  "selected_tree_beats_logistic_on_mean_auc": true,
+  "unseen_test_used": false
+}

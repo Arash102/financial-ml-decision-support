@@ -1,0 +1,6 @@
+﻿fold_id,frozen_validation_events,reproduced_validation_events,reproduced_train_events,missing_from_reproduction,unexpected_in_reproduction,exact_membership_match
+1,10344,10344,62717,0,0,True
+2,10408,10408,73590,0,0,True
+3,10397,10397,83825,0,0,True
+4,10319,10319,94059,0,0,True
+5,10372,10372,107360,0,0,True
