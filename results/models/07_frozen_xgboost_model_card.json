@@ -1,0 +1,81 @@
+{
+  "model_name": "frozen_xgboost_primary",
+  "stage": 7,
+  "status": "fitted_train_only_not_yet_tested",
+  "selected_trial_number": 25,
+  "hyperparameters": {
+    "n_estimators": 150,
+    "max_depth": 2,
+    "learning_rate": 0.1628546104452258,
+    "min_child_weight": 2.0143619867929425,
+    "subsample": 0.7405393416048935,
+    "colsample_bytree": 0.7110250582730073,
+    "gamma": 4.373925301972639,
+    "reg_alpha": 1.1918704239785168e-06,
+    "reg_lambda": 1.6546398167660827,
+    "max_delta_step": 0,
+    "class_weight_mode": "none"
+  },
+  "random_seed": 1729,
+  "training_population": {
+    "events": 118464,
+    "symbols": 499,
+    "first_event_start_date": "2014-05-06 00:00:00",
+    "last_event_start_date": "2021-03-14 00:00:00",
+    "last_event_end_date": "2021-03-17 00:00:00",
+    "positive_fraction": 0.5391764586709886,
+    "training_population_sha256": "c5a87f8e995dde4c8075615da47345b09cc3d1022866e3fafe65f734752f625e"
+  },
+  "features": {
+    "raw_feature_count": 35,
+    "numeric_feature_count": 34,
+    "categorical_features": [
+      "gmma_state"
+    ],
+    "transformed_feature_count": 37
+  },
+  "sample_weighting": {
+    "population_id": "complete_eligible_train_candidate_population",
+    "events": 118464,
+    "symbols": 499,
+    "minimum_raw_average_uniqueness": 0.032258064516128115,
+    "mean_raw_average_uniqueness": 0.10796243335266649,
+    "median_raw_average_uniqueness": 0.07106589646912244,
+    "maximum_raw_average_uniqueness": 1.0000000000000029,
+    "minimum_sample_weight": 0.29878971336960325,
+    "mean_sample_weight": 1.0,
+    "maximum_sample_weight": 9.26248111445799,
+    "sum_sample_weight": 118464.0,
+    "effective_sample_size": 56136.85636383889,
+    "effective_sample_fraction": 0.4738727070151176,
+    "minimum_event_duration_observations": 2,
+    "median_event_duration_observations": 27.0,
+    "maximum_event_duration_observations": 31,
+    "maximum_symbol_concurrency": 31,
+    "nonfinite_raw_uniqueness": 0,
+    "nonfinite_sample_weight": 0,
+    "nonpositive_sample_weight": 0,
+    "validation_events_used": 0,
+    "unseen_test_events_used": 0,
+    "weight_source_scope": "complete_eligible_train_candidate_population",
+    "concurrency_scope": "within_symbol",
+    "normalization": "full_train_mean_one",
+    "weights_sha256": "691b9222a34517808c6cd0d87fbfa7333e84c43333acdc2d90390ceef2e78bde"
+  },
+  "serialization": {
+    "model_path": "E:\\Iran_stock_trade\\financial-ml-decision-support\\results\\models\\07_frozen_xgboost_pipeline.joblib",
+    "model_size_bytes": 20237,
+    "model_sha256": "62a7f3e58d53213c92f1803b19135895497ebf24b56fa472c54047d762740688",
+    "probe_rows": 512,
+    "reload_probability_max_abs_difference": 0.0,
+    "reload_equivalence_passed": true
+  },
+  "probability_policy": {
+    "calibration_fitted": false,
+    "threshold_selected": false,
+    "raw_probabilities_may_be_used_for_ranking": true,
+    "raw_probabilities_must_not_be_interpreted_as_calibrated": true
+  },
+  "training_metrics_reported": false,
+  "unseen_test_used": false
+}
