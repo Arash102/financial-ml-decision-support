@@ -1,0 +1,2 @@
+﻿events,signals,signal_rate,true_positive,false_positive,true_negative,false_negative,precision,prevalence,precision_lift,precision_ratio,specificity,sensitivity,fold_id,dates,signals_per_date,used_for_selection,confirmation_only,signal_fraction
+10372,671,0.06469340532202082,418,253,4859,4842,0.6229508196721312,0.5071345931353645,0.11581622653676671,1.2283737455588106,0.9505086071987481,0.07946768060836502,5,288,2.329861111111111,False,True,0.05
