@@ -1,0 +1,228 @@
+status: stage_10_preregistered_v1
+stage_title: executable_long_only_multilot_portfolio_backtest
+schema_version: stage10_v1_preregistered_long_only_multilot_portfolio
+
+temporal_scope:
+  unseen_test_start: '2021-03-21'
+  signal_generation_end: '2024-09-22'
+  outcome_observation_tail_end: '2024-10-26'
+
+frozen_stage09:
+  producer_commit_sha: d7112980a69a99e0c183561bed2ff8b11b72bd33
+  frozen_tag: milestone-09-v3-confirmatory-signal-evaluation
+  selected_signal_file: results/predictions/09_selected_unseen_test_signals.csv
+  inference_lock_file: results/predictions/09_unseen_test_inference_lock.csv
+  expected_inference_lock_sha256: c29f1ec3b6d59fc5a2aa163f65b880562271f938fc7208a784ee820f5245c946
+  expected_selected_signals: 4311
+  score_interpretation: uncalibrated_ranking_score
+  ranking_order:
+    - score_descending
+    - symbol_ascending
+    - event_id_ascending
+  outcomes_used_for_selection: false
+
+initial_capital:
+  method: customer_transaction_size_anchored_initial_capital_proxy
+  source_file: data_ready/portfolio/final_feature_dim.csv
+  source_column: avg_Buy
+  currency: IRR
+  expected_customer_rows: 500
+  trim_fraction_each_tail: 0.10
+  expected_trimmed_mean_avg_buy_irr: 620315055.56125
+  expected_primary_initial_capital_irr: 20316282773.64711
+  expected_median_sensitivity_initial_capital_irr: 14488954106.360094
+  expected_arithmetic_mean_sensitivity_initial_capital_irr: 199618998259.92108
+  expected_value_relative_tolerance: 1.0e-10
+  interpretation_note: >
+    This is a customer transaction-size-anchored capital proxy, not the
+    directly observed total wealth or daily portfolio value of the traders.
+
+market:
+  direction: long_only
+  short_selling_allowed: false
+  negative_signal_action: no_trade
+  adjusted_price_accounting: true
+  synthetic_share_quantity_interpretation: true
+
+execution:
+  signal_timestamp: end_of_signal_day
+  entry_timing: next_symbol_trading_observation_open
+  signal_validity_observations: 1
+  quantity_rounding: floor_to_positive_integer
+  primary_slippage_each_side: 0.002
+  same_bar_rule: adverse_stop_first
+  cash_from_opening_exit_available_for_same_open_entries: true
+  cash_from_intraday_exit_available_for_same_day_entries: false
+  leverage_allowed: false
+  pyramiding_definition: repeated_frozen_signals_create_independent_lots
+
+costs:
+  source: user_supplied_1404_tse_fee_table
+  application_policy: uniform_tse_schedule_for_all_symbols
+  buy_total_rate: 0.00464
+  sell_total_rate: 0.00964
+  sell_tax_rate_included: 0.005
+  sell_non_tax_rate: 0.00464
+  historical_rate_reconstruction_performed: false
+  limitation_note: >
+    The supplied 1404 Tehran Stock Exchange fee schedule is held constant over
+    the full unseen-test period and is applied uniformly because a frozen
+    exchange-board classification is not available in this stage.
+
+risk:
+  risk_per_lot_fraction: 0.005
+  maximum_symbol_open_risk_fraction: 0.015
+  maximum_portfolio_open_risk_fraction: 0.10
+  open_risk_definition: >
+    max(0, total entry cash cost minus net proceeds at the currently executable
+    protective stop)
+  protected_lot_risk_treatment:
+    trailing_pending: retain_current_risk
+    trailing_active_at_or_above_net_break_even: zero
+    locked_profit_treated_as_negative_risk: false
+  risk_release:
+    trigger: trailing_becomes_executable_at_or_above_net_break_even
+    timing: next_symbol_trading_open_after_activation
+    permit_same_open_reallocation: true
+  residual_execution_risk:
+    included_in_planned_open_risk_cap: false
+    gap_risk_reported: true
+    queue_and_liquidity_risk_reported: true
+
+exposure:
+  maximum_symbol_exposure_fraction: 0.10
+  maximum_gross_exposure_fraction: 0.70
+  protected_lots_still_count_toward_symbol_exposure: true
+  protected_lots_still_count_toward_gross_exposure: true
+
+capacity:
+  maximum_distinct_symbols: 10
+  maximum_open_lots: 20
+  maximum_open_lots_per_symbol: 3
+  maximum_new_lots_per_day: 3
+  protected_lots_still_count_toward_lot_capacity: true
+  protected_lots_still_count_toward_symbol_capacity: true
+
+repeated_signals:
+  primary_action: open_new_independent_lot_if_constraints_pass
+  existing_lot_horizon_reset: false
+  existing_lot_replaced: false
+  score_weighted_position_size: false
+  each_lot_has_independent_entry: true
+  each_lot_has_independent_stop: true
+  each_lot_has_independent_trailing_state: true
+  each_lot_has_independent_30_observation_horizon: true
+
+liquidity:
+  required: true
+  adv_window_observations: 20
+  minimum_adv_history_observations: 20
+  maximum_fraction_of_adv20: 0.01
+  direct_traded_value_column_candidates:
+    - qTotCap
+    - traded_value
+    - trade_value
+    - transaction_value
+    - value
+    - Value
+    - total_value
+  volume_column_candidates:
+    - qTotTran5J
+    - volume
+    - Volume
+    - trade_volume
+    - total_volume
+    - vol
+  fallback_policy: adjusted_last_price_times_raw_volume_proxy
+  fallback_limitation_note: >
+    Adjusted price times raw volume is a liquidity proxy and may be distorted
+    around corporate actions. The selected source is recorded by symbol.
+
+exit_policy:
+  initial_stop_loss_fraction: 0.15
+  maximum_horizon_observations: 30
+  time_exit_price: adjusted_last_price_on_observation_30
+  primary:
+    style: activation_then_trailing
+    trailing_activation_fraction: 0.15
+    trailing_distance_fraction: 0.10
+    trailing_floor: net_break_even_quote
+    activation_effective_timing: next_symbol_trading_open
+  control:
+    style: fixed_take_profit
+    fixed_take_profit_fraction: 0.15
+  trailing_activation_fraction: 0.15
+  trailing_distance_fraction: 0.10
+  fixed_take_profit_fraction: 0.15
+
+scenario_grid:
+  capital_scenarios:
+    - primary
+    - median
+    - mean
+  slippage_scenarios:
+    - 0bp
+    - 10bp
+    - 20bp
+    - 50bp
+  position_structures:
+    - multi_lot
+    - single_lot
+  exit_styles:
+    - trailing
+    - fixed_take_profit
+
+primary_scenario:
+  capital: primary
+  slippage: 20bp
+  position_structure: multi_lot
+  exit_style: trailing
+
+evaluation:
+  trade_metrics:
+    - net_win_rate
+    - mean_net_trade_return
+    - median_net_trade_return
+    - average_winning_trade_return
+    - average_losing_trade_return
+    - net_payoff_ratio
+    - net_profit_factor
+    - mean_holding_observations
+    - exit_reason_distribution
+    - total_fees_tax_and_slippage
+  portfolio_metrics:
+    - final_equity
+    - total_return
+    - cagr
+    - annualized_volatility
+    - sharpe_zero_risk_free
+    - sortino_zero_target
+    - maximum_drawdown
+    - calmar_ratio
+    - turnover
+    - exposure
+    - concurrent_lots
+    - planned_open_risk
+  compare_multi_lot_to_single_lot: true
+  compare_trailing_to_fixed_take_profit: true
+  compare_slippage_sensitivity: true
+  compare_capital_scale_sensitivity: true
+  benchmark_deferred_until_source_is_frozen: true
+
+paths:
+  raw_data: raw_data
+  customer_data: data_ready/portfolio
+  audits: results/audits
+  backtests: results/backtests
+  manifests: results/manifests
+
+safeguards:
+  stage09_signals_must_remain_identical: true
+  stage09_outcome_columns_ignored_for_execution_selection: true
+  no_model_retraining: true
+  no_signal_policy_change: true
+  no_short_positions: true
+  no_leverage: true
+  no_negative_planned_open_risk: true
+  protected_lots_keep_exposure_and_capacity_usage: true
+  results_must_not_modify_preregistered_rules: true
