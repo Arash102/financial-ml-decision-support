@@ -1,10 +1,10 @@
-# Stage 09 v2 — Confirmatory unseen-test signal evaluation with corrected event outcomes
+# Stage 09 v3 — Confirmatory unseen-test signal evaluation with corrected event outcomes
 
 ## Purpose
 
-Stage 09 v2 preserves the Stage 04 candidate rule, Stage 07 XGBoost model, and
+Stage 09 v3 preserves the Stage 04 candidate rule, Stage 07 XGBoost model, and
 Stage 08 daily top-5-percent signal policy. It does not retrain or tune anything.
-The only substantive change from v1 is a reproducible and explicit definition of
+The substantive correction relative to v1 is a reproducible and explicit definition of
 the event-level return used for win rate, payoff ratio, profit factor, and mean
 event outcome.
 
@@ -27,9 +27,18 @@ audited inference-lock SHA-256 exactly:
 
 Any different lock hash is a blocking failure.
 
+
+## Evaluation populations
+
+Predictive discrimination and signal-classification metrics use all 78,189 frozen
+candidate events. Corrected economic outcome reconstruction uses only the 4,311
+signals selected by the already frozen daily top-5-percent policy. This separation
+is intentional: the outcome-observation tail through 26 October 2024 was audited
+for the selected-signal population, not for every nonselected candidate.
+
 ## Corrected event-return policy
 
-For each candidate event, entry is the adjusted last price on the signal date.
+For each frozen selected signal, entry is the adjusted last price on the signal date.
 The next 30 trading observations exclude the signal-date row.
 
 1. **Upper barrier event:** corrected return equals the maximum adjusted-high

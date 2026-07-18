@@ -1,5 +1,5 @@
-status: stage_09_configured_v2
-stage_title: confirmatory_unseen_test_signal_level_evaluation_with_corrected_event_outcomes
+status: stage_09_configured_v3
+stage_title: confirmatory_unseen_test_signal_evaluation_with_selected_signal_corrected_outcomes
 temporal_scope:
   train_end: '2021-03-20'
   unseen_test_start: '2021-03-21'
@@ -67,6 +67,7 @@ corrected_event_outcome_policy:
   portfolio_return_claim_allowed: false
   signal_generation_after_2024_09_22: false
   outcome_tail_used_only_to_complete_existing_signal_windows: true
+  reconstruction_population: frozen_policy_selected_signals_only
 expected_selected_corrected_metrics:
   winning_events: 2138
   losing_events_negative_return: 2165
@@ -108,6 +109,7 @@ evaluation:
   portfolio_backtest_performed: false
   transaction_costs_applied: false
   interpret_corrected_event_return_as: gross_event_level_outcome_not_portfolio_return
+  corrected_signal_outcome_population: frozen_policy_selected_signals_only
 safeguards:
   model_retrained: false
   hyperparameters_changed: false

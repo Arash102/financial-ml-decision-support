@@ -1,6 +1,6 @@
 """Confirmatory unseen-test signal-level evaluation helpers.
 
-Stage 09 v2 preserves the frozen model and signal policy while making the
+Stage 09 v3 preserves the frozen model and signal policy while making the
 signal-level economic outcome definition explicit:
 
 - upper barrier: maximum adjusted-high return over the complete next
@@ -25,7 +25,7 @@ from src.features.preprocessing import parse_market_date
 
 
 UNSEEN_TEST_SIGNAL_SCHEMA_VERSION = (
-    "stage09_v2_confirmatory_unseen_test_corrected_event_outcomes"
+    "stage09_v3_confirmatory_unseen_test_selected_signal_corrected_outcomes"
 )
 
 
