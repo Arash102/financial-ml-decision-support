@@ -5,8 +5,8 @@
   "stage09_producer_commit_sha": "d7112980a69a99e0c183561bed2ff8b11b72bd33",
   "stage09_frozen_tag": "milestone-09-v3-confirmatory-signal-evaluation",
   "stage09_inference_lock_sha256": "c29f1ec3b6d59fc5a2aa163f65b880562271f938fc7208a784ee820f5245c946",
-  "portfolio_config_file_sha256": "c8338024147afe49f98ce8919b56c64d920a713c33676fe2e66cd96d89ce0b36",
-  "portfolio_config_canonical_sha256": "5979aca881b8c1da404a6a0fa40bad3be2b8f39bb7d8c1834cf84e6a1c05c217",
+  "portfolio_config_file_sha256": "c1a537670ad1d346b1697c4b8a8dc440b44969d60fb6a1657f61d5a902737087",
+  "portfolio_config_canonical_sha256": "efc837c4be74d5d7d94176bb048210d2a6c8f96c32850ddbc3f7b9bee725ec53",
   "customer_calibration_file_sha256": "435421b7d7e30aa85706e03a624255e95d449be1f83269a7f8178e52ddf26546",
   "currency": "IRR",
   "customer_rows": 500,
@@ -25,5 +25,16 @@
   "protected_lot_planned_risk": 0.0,
   "protected_lots_still_use_exposure_cash_and_capacity": true,
   "primary_scenario": "capital_primary__slip_20bp__multi_lot__trailing",
-  "portfolio_results_observed_before_preregistration": false
+  "portfolio_results_observed_before_preregistration": false,
+  "data_loader_hotfix": {
+    "version": "stage10_v1_1_invalid_ohlc_execution_calendar",
+    "applied_before_any_portfolio_scenario_completed": true,
+    "trigger": "59 market-history load errors, all caused by nonpositive adjusted OHLC rows",
+    "strategy_parameters_changed": false,
+    "model_or_signal_policy_changed": false,
+    "action": "drop invalid adjusted-OHLC rows before execution-calendar construction",
+    "imputation_performed": false,
+    "invalid_rows_count_as_trading_observations": false,
+    "frozen_signal_execution_plan_population_must_be_preserved": true
+  }
 }

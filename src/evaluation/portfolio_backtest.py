@@ -360,6 +360,9 @@ class MarketHistory:
     date_to_position: dict[pd.Timestamp, int]
     liquidity_source: str
     raw_path: Path
+    source_rows_after_date_filter: int = 0
+    dropped_nonfinite_ohlc_rows: int = 0
+    dropped_nonpositive_ohlc_rows: int = 0
 
 
 DIRECT_TRADED_VALUE_CANDIDATES = (
@@ -463,12 +466,31 @@ def load_market_history(
     if market.empty:
         raise ValueError(f"{symbol}: raw history is empty after date filtering.")
 
-    core = market[["adj_open", "adj_high", "adj_low", "adj_last_price"]]
-    if not np.isfinite(core.to_numpy(dtype=float)).all():
-        bad = int((~np.isfinite(core.to_numpy(dtype=float))).sum())
-        raise ValueError(f"{symbol}: adjusted OHLC contains {bad} nonfinite values.")
-    if core.le(0.0).any().any():
-        raise ValueError(f"{symbol}: adjusted OHLC contains nonpositive values.")
+    source_rows_after_date_filter = int(len(market))
+    core_columns = ["adj_open", "adj_high", "adj_low", "adj_last_price"]
+    core = market[core_columns]
+    finite_row_mask = pd.Series(
+        np.isfinite(core.to_numpy(dtype=float)).all(axis=1),
+        index=market.index,
+    )
+    positive_row_mask = core.gt(0.0).all(axis=1)
+
+    dropped_nonfinite_ohlc_rows = int((~finite_row_mask).sum())
+    dropped_nonpositive_ohlc_rows = int(
+        (finite_row_mask & ~positive_row_mask).sum()
+    )
+    valid_execution_row_mask = finite_row_mask & positive_row_mask
+
+    # Invalid adjusted OHLC rows cannot represent executable trading bars.
+    # They are removed before constructing the symbol trading-observation
+    # calendar and are never imputed or repaired.
+    market = market.loc[valid_execution_row_mask].reset_index(drop=True)
+
+    if market.empty:
+        raise ValueError(
+            f"{symbol}: no valid adjusted-OHLC trading observations remain "
+            "after filtering nonfinite/nonpositive rows."
+        )
 
     market["raw_volume"] = np.nan
     market["traded_value_irr"] = np.nan
@@ -516,6 +538,9 @@ def load_market_history(
         date_to_position=date_to_position,
         liquidity_source=liquidity_source,
         raw_path=raw_path,
+        source_rows_after_date_filter=source_rows_after_date_filter,
+        dropped_nonfinite_ohlc_rows=dropped_nonfinite_ohlc_rows,
+        dropped_nonpositive_ohlc_rows=dropped_nonpositive_ohlc_rows,
     )
 
 
@@ -1795,7 +1820,26 @@ def run_stage10(
                 {
                     "symbol": symbol,
                     "raw_path": str(raw_path),
+                    "source_rows_after_date_filter": (
+                        history.source_rows_after_date_filter
+                    ),
                     "rows": len(history.frame),
+                    "dropped_nonfinite_ohlc_rows": (
+                        history.dropped_nonfinite_ohlc_rows
+                    ),
+                    "dropped_nonpositive_ohlc_rows": (
+                        history.dropped_nonpositive_ohlc_rows
+                    ),
+                    "dropped_invalid_ohlc_rows": (
+                        history.dropped_nonfinite_ohlc_rows
+                        + history.dropped_nonpositive_ohlc_rows
+                    ),
+                    "execution_valid_row_fraction": (
+                        len(history.frame)
+                        / history.source_rows_after_date_filter
+                        if history.source_rows_after_date_filter > 0
+                        else float("nan")
+                    ),
                     "first_date": history.frame["dEven"].min(),
                     "last_date": history.frame["dEven"].max(),
                     "liquidity_source": history.liquidity_source,
@@ -1892,6 +1936,30 @@ def run_stage10(
             "selected": int(len(signals)),
             "planned": int(len(signal_plans)),
             "symbols": int(signals["symbol"].nunique()),
+        },
+        "market_data_quality": {
+            "policy": (
+                "drop_nonfinite_or_nonpositive_adjusted_ohlc_rows_before_"
+                "constructing_symbol_execution_calendars"
+            ),
+            "symbols_loaded": int(len(inventory)),
+            "source_rows_after_date_filter": int(
+                inventory["source_rows_after_date_filter"].sum()
+            ),
+            "valid_execution_rows": int(inventory["rows"].sum()),
+            "dropped_nonfinite_ohlc_rows": int(
+                inventory["dropped_nonfinite_ohlc_rows"].sum()
+            ),
+            "dropped_nonpositive_ohlc_rows": int(
+                inventory["dropped_nonpositive_ohlc_rows"].sum()
+            ),
+            "symbols_with_dropped_invalid_ohlc_rows": int(
+                inventory["dropped_invalid_ohlc_rows"].gt(0).sum()
+            ),
+            "invalid_rows_imputed": False,
+            "signal_execution_plan_population_preserved": bool(
+                len(signal_plans) == len(signals)
+            ),
         },
         "scenarios": [asdict(scenario) for scenario in scenarios],
         "primary_scenario": primary.iloc[0].to_dict(),

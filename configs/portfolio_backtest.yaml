@@ -44,6 +44,21 @@ market:
   adjusted_price_accounting: true
   synthetic_share_quantity_interpretation: true
 
+market_data_quality:
+  hotfix_version: stage10_v1_1_invalid_ohlc_execution_calendar
+  trigger: pre_result_execution_failure_before_any_portfolio_scenario_completed
+  nonfinite_adjusted_ohlc_row_action: drop_before_execution_calendar
+  nonpositive_adjusted_ohlc_row_action: drop_before_execution_calendar
+  invalid_rows_imputed_or_repaired: false
+  invalid_rows_count_as_trading_observations: false
+  signal_execution_plan_population_must_equal_frozen_signals: true
+  rationale: >
+    Rows with nonfinite or nonpositive adjusted open, high, low, or last price
+    cannot represent executable trading bars. They are excluded before the
+    symbol trading-observation calendar and ADV calculation are constructed.
+    No price is imputed. The run still fails if any frozen selected signal
+    cannot be assigned a complete executable next-open and 30-observation plan.
+
 execution:
   signal_timestamp: end_of_signal_day
   entry_timing: next_symbol_trading_observation_open

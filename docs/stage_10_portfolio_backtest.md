@@ -252,3 +252,27 @@ under the frozen rules and stated assumptions. It cannot establish:
 
 The benchmark source is deliberately deferred until its identity and
 construction are separately frozen.
+
+
+## Pre-result market-data loader hotfix (v1.1)
+
+The first attempted execution stopped before any portfolio scenario was completed.
+The diagnostic file contained 59 errors, and every error had the same cause:
+at least one raw row in the affected symbol contained a nonpositive adjusted
+open, high, low, or last price.
+
+These rows cannot represent executable trading observations. The loader therefore:
+
+- removes rows with nonfinite or nonpositive adjusted OHLC values before
+  constructing the symbol execution calendar;
+- does not impute, forward-fill, replace, or repair any price;
+- excludes removed rows from entry timing, holding-period observation counts,
+  trailing-stop processing, and ADV calculation;
+- records removed-row counts by symbol in
+  `10_raw_market_inventory_audit.csv`;
+- still requires all 4,311 frozen selected signals to receive a complete
+  next-open entry plan and 30-observation execution horizon.
+
+The hotfix changes no model, score, signal, capital, fee, slippage, risk,
+capacity, exposure, liquidity, or exit parameter. It was applied after a
+pre-result loader failure and before any portfolio result was produced.

@@ -8,6 +8,7 @@ from src.evaluation.portfolio_backtest import (
     BacktestScenario,
     MarketHistory,
     cost_adjusted_stop_loss_fraction,
+    load_market_history,
     simulate_scenario,
 )
 
@@ -203,3 +204,50 @@ def test_multilot_preserves_repeated_signals_and_single_lot_rejects_them() -> No
             "rejection_reason",
         ]
     ) == {"single_lot_symbol_already_open"}
+
+
+def test_market_loader_drops_nonpositive_ohlc_rows_without_imputation(
+    tmp_path: Path,
+) -> None:
+    raw_path = tmp_path / "AAA.csv"
+    frame = pd.DataFrame(
+        {
+            "dEven": [
+                "2021-01-01",
+                "2021-01-02",
+                "2021-01-03",
+                "2021-01-04",
+            ],
+            "adj_open": [100.0, 0.0, 102.0, 103.0],
+            "adj_high": [101.0, 0.0, 103.0, 104.0],
+            "adj_low": [99.0, 0.0, 101.0, 102.0],
+            "adj_last_price": [100.0, 0.0, 102.0, 103.0],
+            "qTotCap": [1.0e9, 0.0, 1.2e9, 1.3e9],
+        }
+    )
+    frame.to_csv(raw_path, index=False)
+
+    history = load_market_history(
+        symbol="AAA",
+        raw_path=raw_path,
+        tail_end=pd.Timestamp("2021-01-31"),
+        liquidity_cfg={
+            "required": True,
+            "adv_window_observations": 2,
+            "minimum_adv_history_observations": 1,
+            "direct_traded_value_column_candidates": ["qTotCap"],
+            "volume_column_candidates": ["volume"],
+        },
+    )
+
+    assert history.source_rows_after_date_filter == 4
+    assert history.dropped_nonfinite_ohlc_rows == 0
+    assert history.dropped_nonpositive_ohlc_rows == 1
+    assert history.frame["dEven"].tolist() == [
+        pd.Timestamp("2021-01-01"),
+        pd.Timestamp("2021-01-03"),
+        pd.Timestamp("2021-01-04"),
+    ]
+    assert not history.frame[
+        ["adj_open", "adj_high", "adj_low", "adj_last_price"]
+    ].le(0.0).any().any()
