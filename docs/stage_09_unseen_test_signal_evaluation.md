@@ -1,67 +1,67 @@
-# Stage 09 v1 — Confirmatory unseen-test signal-level evaluation
+# Stage 09 v2 — Confirmatory unseen-test signal evaluation with corrected event outcomes
 
 ## Purpose
 
-Stage 09 applies the already frozen Stage 07 model and Stage 08 daily ranking
-policy to the untouched unseen-test period. No model, feature, calibration,
-threshold, or signal-fraction decision is changed after test outcomes are opened.
+Stage 09 v2 preserves the Stage 04 candidate rule, Stage 07 XGBoost model, and
+Stage 08 daily top-5-percent signal policy. It does not retrain or tune anything.
+The only substantive change from v1 is a reproducible and explicit definition of
+the event-level return used for win rate, payoff ratio, profit factor, and mean
+event outcome.
 
-## Causal feature inference
+## Frozen temporal boundary
 
-The train tail is included as historical warm-up for rolling stock features and
-for the confirmation-gated ZigZag state. The test period is not treated as an
-independent cold-start sequence. All feature calculations remain causal: each
-row uses only information available on or before that row's date.
+- Signal generation: 21 March 2021 through 22 September 2024.
+- Outcome-observation tail: through 26 October 2024.
 
-The equal-weight market index is reconstructed across the frozen 499-symbol
-universe through 22 September 2024. Repeated index observations are collapsed
-by their cross-file median on each date, matching the Stage 04 canonicalization
-rule. Cross-file inconsistencies are audited rather than used to modify the
-frozen feature or policy design.
+No signal is generated after 22 September 2024. Later raw observations are used
+only to complete the already-defined 30-trading-observation outcome windows of
+signals generated on or before that date.
 
 ## Blind inference lock
 
-The notebook first creates candidate features, loads and hash-verifies the frozen
-XGBoost pipeline, generates scores, applies the daily top-5-percent rule, and
-writes an outcome-free inference lock. Only after this lock is written are label,
-event-return, barrier, and holding-period columns read and joined for evaluation.
+Candidate construction, model scoring, and daily selection are completed before
+labels or event outcomes are loaded. The v2 run must reproduce the previously
+audited inference-lock SHA-256 exactly:
 
-## Evaluation levels
+`c29f1ec3b6d59fc5a2aa163f65b880562271f938fc7208a784ee820f5245c946`
 
-Predictive evaluation reports ROC AUC, average precision, Brier score, log loss,
-and ECE on all unseen-test candidate events. Calibration metrics are diagnostic
-only because Stage 08 rejected literal probability interpretation.
+Any different lock hash is a blocking failure.
 
-Signal classification evaluation treats the frozen daily rank policy as the
-binary decision rule and reports precision, precision lift, specificity, and
-sensitivity.
+## Corrected event-return policy
 
-Signal outcome evaluation reports win rate, gross label-horizon event return,
-payoff ratio, profit factor, and holding-period statistics. These are overlapping
-event-level outcomes. They are not portfolio returns and do not include capital
-constraints, position sizing, liquidity, slippage, or transaction costs.
+For each candidate event, entry is the adjusted last price on the signal date.
+The next 30 trading observations exclude the signal-date row.
 
-## Frozen policy
+1. **Upper barrier event:** corrected return equals the maximum adjusted-high
+   return over the complete 30-observation window.
+2. **Lower barrier event:** corrected return is fixed at -15 percent.
+3. **Vertical barrier event:** corrected return equals the adjusted-last return on
+   trading observation 30.
+4. A zero vertical return is not a win.
 
-For each test signal date:
+The sign of the corrected return must match the frozen binary label for every
+event. This policy changes no labels; it only corrects the magnitude assigned to
+upper-barrier outcomes.
 
-1. rank eligible long candidates by raw XGBoost score descending;
-2. break ties by symbol ascending and event ID ascending;
-3. select `max(1, ceil(0.05 × daily candidate count))`.
+## Interpretation boundary
 
-No fixed probability threshold or calibrator is introduced.
+The upper-event return uses the ex-post maximum favorable price within the
+30-observation window. It measures the movement potential of a selected signal.
+It is not an executable take-profit rule, a realized trade return, or a portfolio
+return. Notebook 10 will require an independently pre-specified exit rule,
+capital allocation, overlapping-position logic, costs, and an equity curve.
 
-## Main outputs
+## Main v2 outputs
 
 - `results/predictions/09_unseen_test_inference_lock.csv`
 - `results/predictions/09_unseen_test_signal_evaluation.csv`
 - `results/predictions/09_selected_unseen_test_signals.csv`
-- `results/audits/09_unseen_test_candidate_panel_audit.csv`
-- `results/audits/09_unseen_test_feature_engineering_audit.csv`
 - `results/audits/09_unseen_test_predictive_metrics.csv`
 - `results/audits/09_unseen_test_signal_classification_metrics.csv`
 - `results/audits/09_unseen_test_signal_outcome_summary.csv`
 - `results/audits/09_unseen_test_signal_outcomes_by_year.csv`
-- `results/audits/09_unseen_test_signal_date_audit.csv`
+- `results/audits/09_unseen_test_signal_outcomes_by_barrier.csv`
+- `results/audits/09_outcome_observation_tail_audit.csv`
+- `results/audits/09_corrected_event_return_errors.csv`
 - `results/manifests/09_unseen_test_inference_lock.json`
 - `results/manifests/09_unseen_test_signal_evaluation_manifest.json`

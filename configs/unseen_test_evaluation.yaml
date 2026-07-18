@@ -1,9 +1,10 @@
-status: stage_09_configured_v1
-stage_title: confirmatory_unseen_test_signal_level_evaluation
+status: stage_09_configured_v2
+stage_title: confirmatory_unseen_test_signal_level_evaluation_with_corrected_event_outcomes
 temporal_scope:
   train_end: '2021-03-20'
   unseen_test_start: '2021-03-21'
-  unseen_test_end: '2024-09-22'
+  signal_generation_end: '2024-09-22'
+  outcome_observation_tail_end: '2024-10-26'
 frozen_inputs:
   frozen_universe_manifest: results/manifests/02_frozen_universe.csv
   stage04_candidate_policy: results/manifests/04_candidate_filter_policy.json
@@ -13,9 +14,13 @@ frozen_inputs:
   stage08_manifest: results/manifests/08_probability_signal_policy_manifest.json
   selected_model: xgboost
   expected_model_sha256: 62a7f3e58d53213c92f1803b19135895497ebf24b56fa472c54047d762740688
+  expected_inference_lock_sha256: c29f1ec3b6d59fc5a2aa163f65b880562271f938fc7208a784ee820f5245c946
   expected_universe_size: 499
   expected_unseen_test_rows: 371321
   expected_unseen_test_eligible_events: 359454
+  expected_candidate_events: 78189
+  expected_signal_dates: 820
+  expected_selected_signals: 4311
   expected_raw_features: 35
   expected_transformed_features: 37
 feature_inference:
@@ -34,6 +39,7 @@ inference_lock:
   lock_file: results/predictions/09_unseen_test_inference_lock.csv
   lock_manifest: results/manifests/09_unseen_test_inference_lock.json
   outcome_columns_in_lock_file: false
+  expected_file_sha256: c29f1ec3b6d59fc5a2aa163f65b880562271f938fc7208a784ee820f5245c946
 frozen_signal_policy:
   score_interpretation: uncalibrated_ranking_score
   calibration_method: raw_identity
@@ -46,6 +52,37 @@ frozen_signal_policy:
   - symbol_ascending
   - event_id_ascending
   fixed_probability_threshold_selected: false
+corrected_event_outcome_policy:
+  horizon_observations: 30
+  entry_price: adjusted_last_price_on_signal_date
+  monitored_window: next_30_trading_observations_excluding_signal_date
+  upper_barrier_return: 0.15
+  lower_barrier_return: -0.15
+  upper_event_return: maximum_adjusted_high_return_over_complete_30_observation_window
+  lower_event_return: fixed_minus_15_percent
+  vertical_event_return: adjusted_last_return_on_trading_observation_30
+  zero_vertical_return_is_winner: false
+  upper_return_is_ex_post_maximum_favorable_outcome: true
+  executable_exit_rule_claim_allowed: false
+  portfolio_return_claim_allowed: false
+  signal_generation_after_2024_09_22: false
+  outcome_tail_used_only_to_complete_existing_signal_windows: true
+expected_selected_corrected_metrics:
+  winning_events: 2138
+  losing_events_negative_return: 2165
+  breakeven_events: 8
+  upper_barrier_events: 1544
+  lower_barrier_events: 1221
+  vertical_barrier_events: 1546
+  win_rate: 0.495940617026212
+  average_winning_return: 0.25041365784839764
+  average_losing_return: -0.10980568246350031
+  payoff_ratio: 2.2805163833997004
+  profit_factor: 2.2520757633757778
+  mean_corrected_event_return: 0.06904548780941683
+  median_corrected_event_return: -0.0012285012285011554
+  selected_signals_using_outcome_tail: 40
+  latest_required_outcome_window_end: '2024-10-26'
 evaluation:
   predictive_metrics:
   - roc_auc
@@ -58,17 +95,19 @@ evaluation:
   - precision_lift
   - specificity
   - sensitivity
-  signal_outcome_metrics:
+  corrected_signal_outcome_metrics:
   - win_rate
-  - mean_event_return
-  - median_event_return
+  - mean_corrected_event_return
+  - median_corrected_event_return
+  - average_winning_return
+  - average_losing_return
   - payoff_ratio
-  - gross_profit_factor
-  - mean_holding_period_observations
+  - profit_factor
   yearly_stability_report: true
+  barrier_outcome_report: true
   portfolio_backtest_performed: false
   transaction_costs_applied: false
-  interpret_event_return_as: gross_label_horizon_event_outcome_not_portfolio_return
+  interpret_corrected_event_return_as: gross_event_level_outcome_not_portfolio_return
 safeguards:
   model_retrained: false
   hyperparameters_changed: false
