@@ -1,0 +1,81 @@
+status: stage_09_configured_v1
+stage_title: confirmatory_unseen_test_signal_level_evaluation
+temporal_scope:
+  train_end: '2021-03-20'
+  unseen_test_start: '2021-03-21'
+  unseen_test_end: '2024-09-22'
+frozen_inputs:
+  frozen_universe_manifest: results/manifests/02_frozen_universe.csv
+  stage04_candidate_policy: results/manifests/04_candidate_filter_policy.json
+  stage07_model_manifest: results/manifests/07_frozen_model_training_manifest.json
+  stage07_model_file: results/models/07_frozen_xgboost_pipeline.joblib
+  stage08_policy: results/manifests/08_probability_signal_policy.json
+  stage08_manifest: results/manifests/08_probability_signal_policy_manifest.json
+  selected_model: xgboost
+  expected_model_sha256: 62a7f3e58d53213c92f1803b19135895497ebf24b56fa472c54047d762740688
+  expected_universe_size: 499
+  expected_unseen_test_rows: 371321
+  expected_unseen_test_eligible_events: 359454
+  expected_raw_features: 35
+  expected_transformed_features: 37
+feature_inference:
+  history_policy: concatenate_frozen_train_and_unseen_test_history_then_compute_causal_features
+  market_index_policy: cross_file_median_on_each_date
+  market_index_consistency_relative_tolerance: 1.0e-10
+  market_feature_history_end: '2024-09-22'
+  stock_rolling_history_includes_train_tail: true
+  zigzag_history_includes_train_tail: true
+  zigzag_confirmation_gated: true
+  candidate_threshold_fraction: 0.15
+  candidate_side: long
+  future_outcomes_used_for_feature_generation: false
+inference_lock:
+  write_scores_before_outcome_join: true
+  lock_file: results/predictions/09_unseen_test_inference_lock.csv
+  lock_manifest: results/manifests/09_unseen_test_inference_lock.json
+  outcome_columns_in_lock_file: false
+frozen_signal_policy:
+  score_interpretation: uncalibrated_ranking_score
+  calibration_method: raw_identity
+  calibrator_fitted: false
+  policy_type: daily_cross_sectional_top_fraction
+  selected_fraction: 0.05
+  minimum_signals_per_date: 1
+  ranking_order:
+  - score_descending
+  - symbol_ascending
+  - event_id_ascending
+  fixed_probability_threshold_selected: false
+evaluation:
+  predictive_metrics:
+  - roc_auc
+  - average_precision
+  - brier_score
+  - log_loss
+  - expected_calibration_error
+  signal_classification_metrics:
+  - precision
+  - precision_lift
+  - specificity
+  - sensitivity
+  signal_outcome_metrics:
+  - win_rate
+  - mean_event_return
+  - median_event_return
+  - payoff_ratio
+  - gross_profit_factor
+  - mean_holding_period_observations
+  yearly_stability_report: true
+  portfolio_backtest_performed: false
+  transaction_costs_applied: false
+  interpret_event_return_as: gross_label_horizon_event_outcome_not_portfolio_return
+safeguards:
+  model_retrained: false
+  hyperparameters_changed: false
+  features_changed: false
+  candidate_threshold_changed: false
+  calibration_refit: false
+  signal_fraction_changed: false
+  test_labels_used_before_inference_lock: false
+  test_outcomes_used_for_selection: false
+  portfolio_constraints_selected: false
