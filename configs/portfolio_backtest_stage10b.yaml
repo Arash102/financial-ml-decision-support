@@ -1,6 +1,11 @@
-status: stage_10b_exploratory_posthoc_v1_1
+status: stage_10b_exploratory_posthoc_v1_2
 stage_title: exploratory_started_nonzero_zigzag15_capacity_liquidity_portfolio_backtest
-schema_version: stage10b_v1_1_exploratory_started_nonzero_zigzag15_capacity_liquidity
+schema_version: stage10b_v1_2_exploratory_started_nonzero_zigzag15_capacity_liquidity
+
+temporal_scope:
+  unseen_test_start: '2021-03-21'
+  signal_generation_end: '2024-09-22'
+  outcome_observation_tail_end: '2024-10-26'
 
 baseline_stage10:
   manifest_file: results/manifests/10_portfolio_backtest_manifest.json

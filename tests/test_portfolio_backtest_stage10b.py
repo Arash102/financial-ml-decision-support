@@ -174,3 +174,18 @@ def test_stage10b_outputs_do_not_use_stage10_filenames() -> None:
     assert '"10b_started_nonzero_zigzag15_filtered_inference.csv"' in text
     assert '"10b_started_nonzero_zigzag15_selected_signals.csv"' in text
     assert 'backtests_dir / "10_scenario_summary.csv"' not in text
+
+
+
+def test_packaged_config_has_frozen_temporal_scope() -> None:
+    config_path = (
+        Path(__file__).parents[1]
+        / "configs/portfolio_backtest_stage10b.yaml"
+    )
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+
+    assert config["temporal_scope"] == {
+        "unseen_test_start": "2021-03-21",
+        "signal_generation_end": "2024-09-22",
+        "outcome_observation_tail_end": "2024-10-26",
+    }

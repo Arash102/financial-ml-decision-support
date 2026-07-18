@@ -43,7 +43,7 @@ from src.evaluation.portfolio_backtest import (
 
 
 STAGE10B_SCHEMA_VERSION = (
-    "stage10b_v1_1_exploratory_started_nonzero_zigzag15_capacity_liquidity"
+    "stage10b_v1_2_exploratory_started_nonzero_zigzag15_capacity_liquidity"
 )
 
 
@@ -627,6 +627,36 @@ def _add_scenario_metadata(
     return result
 
 
+def _validate_temporal_scope(config: dict[str, object]) -> None:
+    required = {
+        "unseen_test_start",
+        "signal_generation_end",
+        "outcome_observation_tail_end",
+    }
+    scope = config.get("temporal_scope")
+    if not isinstance(scope, dict):
+        raise KeyError(
+            "Stage 10B configuration is missing the required temporal_scope block."
+        )
+    missing = sorted(required - set(scope))
+    if missing:
+        raise KeyError(
+            f"Stage 10B temporal_scope fields are missing: {missing}"
+        )
+
+    unseen_start = pd.Timestamp(scope["unseen_test_start"])
+    signal_end = pd.Timestamp(scope["signal_generation_end"])
+    tail_end = pd.Timestamp(scope["outcome_observation_tail_end"])
+    if unseen_start > signal_end:
+        raise ValueError(
+            "unseen_test_start cannot be after signal_generation_end."
+        )
+    if signal_end > tail_end:
+        raise ValueError(
+            "signal_generation_end cannot be after outcome_observation_tail_end."
+        )
+
+
 def run_stage10b(
     *,
     repository_root: Path,
@@ -635,6 +665,7 @@ def run_stage10b(
 ) -> dict[str, Any]:
     """Run the complete Stage 10B exploratory signal and portfolio evaluation."""
     repository_root = Path(repository_root).resolve()
+    _validate_temporal_scope(config)
     baseline = config["baseline_stage10"]
     baseline_manifest_path = repository_root / baseline["manifest_file"]
     if not baseline_manifest_path.exists():

@@ -121,3 +121,17 @@ Stage 10 remains the confirmatory portfolio result. Stage 10B may diagnose and
 motivate a future policy, but any winning Stage 10B specification requires a new
 untouched temporal sample before it can support a confirmatory profitability
 claim.
+
+
+## v1.2 temporal-scope configuration hotfix
+
+The first v1.1 notebook execution stopped before any Stage 10B scenario
+completed because the packaged YAML omitted the frozen `temporal_scope` block
+required by the runner. Version 1.2 adds the unchanged Stage 09/10 dates:
+
+- unseen-test start: 2021-03-21;
+- signal-generation end: 2024-09-22;
+- outcome-observation tail end: 2024-10-26.
+
+No model score, signal filter, ranking policy, portfolio parameter, cost,
+liquidity, risk, capacity, or exit rule changed.
