@@ -1,0 +1,127 @@
+status: stage_10c_exploratory_posthoc_v1
+stage_title: causal_market_breadth_and_early_started_filter_diagnostic
+schema_version: stage10c_v1_causal_breadth_started_1_to_3_no_retraining
+
+exploratory_status:
+  posthoc: true
+  confirmatory_claim_allowed: false
+  model_retrained: false
+  scores_recomputed: false
+  purpose: >
+    Evaluate a causal cross-sectional market-breadth feature and an early-move
+    started filter using the frozen Stage 09 candidate population and scores,
+    without changing or retraining the model.
+
+temporal_scope:
+  train_end: '2021-03-20'
+  unseen_test_start: '2021-03-21'
+  signal_generation_end: '2024-09-22'
+
+frozen_inputs:
+  frozen_universe_manifest: results/manifests/02_frozen_universe.csv
+  expected_universe_size: 499
+  inference_lock_file: results/predictions/09_unseen_test_inference_lock.csv
+  expected_inference_lock_sha256: c29f1ec3b6d59fc5a2aa163f65b880562271f938fc7208a784ee820f5245c946
+  expected_candidate_events: 78189
+  expected_signal_dates: 820
+  expected_stage09_selected_signals: 4311
+  stage09_evaluation_file: results/predictions/09_unseen_test_signal_evaluation.csv
+  stage09_score_column: xgboost_ranking_score
+  stage09_label_column: meta_label
+  stage09_event_return_column: original_event_return
+
+paths:
+  raw_data: raw_data
+  unseen_test_data: data_ready/unseen_test
+  predictions: results/predictions
+  audits: results/audits
+  metrics: results/metrics
+  manifests: results/manifests
+
+started_filter:
+  source_priority:
+    - raw_data
+    - unseen_test_data
+  date_column: dEven
+  column: started
+  minimum_inclusive: 1
+  maximum_inclusive: 3
+  recompute: false
+  interpretation: retain_only_the_first_three_started_observations
+
+breadth:
+  universe: frozen_stage02_modeling_universe
+  date_column: dEven
+  adjusted_close_column: adj_last_price
+  return_definition: current_valid_adjusted_close_divided_by_previous_valid_adjusted_close_minus_one
+  zero_return_tolerance: 0.0
+  suspended_or_missing_symbol_treatment: exclude_from_that_dates_denominator
+  unchanged_symbol_treatment: include_in_denominator_with_zero_numerator_contribution
+  ema_span: 30
+  ema_min_periods: 30
+  slope_lag_market_observations: 5
+  transition_lower_bound: -0.30
+  transition_upper_bound: 0.30
+  bins:
+    - -1.0
+    - -0.6
+    - -0.3
+    - 0.0
+    - 0.3
+    - 0.6
+    - 1.0
+  bin_labels:
+    - minus_1_to_minus_06
+    - minus_06_to_minus_03
+    - minus_03_to_0
+    - 0_to_03
+    - 03_to_06
+    - 06_to_1
+
+market_index:
+  date_column: dEven
+  close_column: xNivInuClMresIbs
+  low_column: xNivInuPbMresIbs
+  high_column: xNivInuPhMresIbs
+  cross_file_canonical_aggregation: median
+  consistency_relative_tolerance: 1.0e-10
+  market_volatility_window: 20
+  market_ema_fast_window: 20
+  market_ema_slow_window: 60
+  market_drawdown_window: 60
+  correlation_features:
+    - market_return_1
+    - market_return_5
+    - market_return_20
+    - market_volatility_20
+    - market_ema_20_distance
+    - market_ema_60_distance
+    - market_range_fraction
+    - market_close_location
+    - market_drawdown_60
+
+signal_policy:
+  selected_fraction: 0.05
+  minimum_per_date: 1
+  ranking_order:
+    - score_descending
+    - symbol_ascending
+    - event_id_ascending
+
+analysis_variants:
+  - baseline
+  - started_1_to_3
+  - recovery
+  - deterioration
+  - started_1_to_3_and_recovery
+  - started_1_to_3_and_deterioration
+
+safeguards:
+  stage09_inference_lock_must_remain_identical: true
+  baseline_stage09_selection_must_reconstruct_exactly: true
+  labels_not_used_for_filtering_or_ranking: true
+  no_model_retraining: true
+  no_score_recalculation: true
+  no_feature_added_to_frozen_model: true
+  all_breadth_values_causal: true
+  output_prefix: 10c_
