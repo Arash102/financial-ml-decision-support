@@ -1,0 +1,2 @@
+﻿calendar_rows,first_date,last_date,minimum_valid_symbols,maximum_valid_symbols,raw_missing_rows,ema30_missing_rows_before_warmup_encoding,slope5_missing_rows_before_warmup_encoding,warmup_regime_rows,warmup_numeric_fill_value,schema_version,frozen_symbols,feature_horizon_end,same_day_or_past_only,future_rows_used
+2519,2014-03-25,2024-09-22,6,490,0,29,34,34,0.0,stage09_v4_causal_stage04_breadth_reconstruction,499,2024-09-22,True,False
