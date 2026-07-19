@@ -1,0 +1,2 @@
+﻿policy_name,true_positive,false_positive,true_negative,false_negative,events,signals,expected_signals,signal_rate,dates,dates_with_signal,date_coverage,precision,specificity,sensitivity,prevalence,min_fold_specificity,mean_fold_specificity,std_fold_specificity,min_fold_precision,policy_complete
+old_daily_top5_minimum_one,1987,1029,19988,28836,51840,3016,3016,0.058179012345679015,838,838,1.0,0.6588196286472149,0.9510396345815293,0.0644648476786815,0.594579475308642,0.9445887445887445,0.9506310330169242,0.004129262673777876,0.44028520499108736,True

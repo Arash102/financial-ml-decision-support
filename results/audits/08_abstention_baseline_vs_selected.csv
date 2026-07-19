@@ -1,0 +1,3 @@
+﻿policy_name,signals,true_positive,false_positive,precision,specificity,sensitivity,zero_signal_dates,signal_coverage_vs_baseline
+old_daily_top5_minimum_one,3016,1987,1029,0.6588196286472149,0.9510396345815293,0.0644648476786815,0,1.0
+selected_abstention_policy,1398,994,404,0.7110157367668097,0.9807774658609697,0.03224864549200272,452,0.4635278514588859

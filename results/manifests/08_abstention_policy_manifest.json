@@ -1,0 +1,159 @@
+{
+  "stage": 8,
+  "status": "frozen_after_integrity_checks",
+  "stage_version": "v3_train_only_abstention_policy",
+  "notebook": "08_unseen_test_evaluation.ipynb",
+  "git_commit_sha": "964ca042fa030830fab955f50a477ee69c4790f2",
+  "software": {
+    "timestamp_utc": "2026-07-19T21:18:26.031988+00:00",
+    "python_version": "3.12.2 (tags/v3.12.2:6abddd9, Feb  6 2024, 21:26:36) [MSC v.1937 64 bit (AMD64)]",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "numpy_version": "1.26.4",
+    "pandas_version": "2.2.3"
+  },
+  "selected_policy_file": "E:\\Iran_stock_trade\\financial-ml-decision-support\\results\\manifests\\08_abstention_signal_policy.json",
+  "selected_policy_configuration_hash": "4258a918e31d58a930b1ffc39520e5702f82bdd6f7be27288312ea83c8a474f4",
+  "selected_policy_id": "G3_recovery_only__q0000",
+  "candidate_policies_evaluated": 20,
+  "candidate_policies_passing_coverage": 6,
+  "selected_model": "xgboost",
+  "selected_feature_set": "I_full_40",
+  "selected_trial": 10,
+  "source_model_sha256": "73a781551cdabd6bb67f5b9c0836a8683372e46487d9aade29e6320006086c1f",
+  "oof_rows": 51840,
+  "oof_folds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "selected_policy": {
+    "stage": 8,
+    "status": "frozen_train_only_abstention_policy",
+    "policy_schema_version": "stage08_v3_train_only_breadth_gate_threshold_daily_cap",
+    "source_model": "xgboost",
+    "source_feature_set": "I_full_40",
+    "source_trial": 10,
+    "source_model_sha256": "73a781551cdabd6bb67f5b9c0836a8683372e46487d9aade29e6320006086c1f",
+    "score_policy": {
+      "score_column": "probability_positive",
+      "interpretation": "uncalibrated_ranking_score",
+      "calibrator_fitted": false,
+      "literal_probability_interpretation_allowed": false,
+      "threshold_is_operational_cutoff_not_calibrated_probability": true
+    },
+    "market_gate": {
+      "gate_name": "G3_recovery_only",
+      "allowed_regimes": [
+        "recovery_negative",
+        "recovery_positive"
+      ],
+      "blocked_regimes": [
+        "broad_advance",
+        "broad_decline",
+        "deterioration",
+        "neutral_transition",
+        "warmup_unavailable"
+      ]
+    },
+    "score_threshold": {
+      "minimum_raw_score": 0.3844631016254425,
+      "source_quantile_of_baseline_selected_oof_scores": 0.0
+    },
+    "daily_cap": {
+      "maximum_fraction": 0.05,
+      "minimum_signals_per_date": 0,
+      "quota_rounding": "ceil",
+      "zero_signal_dates_allowed": true,
+      "ranking_order": [
+        "score_descending",
+        "symbol_ascending",
+        "event_id_ascending"
+      ]
+    },
+    "coverage_constraints": {
+      "minimum_pooled_signal_coverage_vs_baseline": 0.25,
+      "minimum_each_fold_signal_coverage_vs_baseline": 0.25,
+      "passed": true
+    },
+    "train_oof_selection_metrics": {
+      "true_positive": 994,
+      "false_positive": 404,
+      "true_negative": 20613,
+      "false_negative": 29829,
+      "events": 51840,
+      "signals": 1398,
+      "baseline_signals": 3016,
+      "signal_coverage": 0.4635278514588859,
+      "dates": 838,
+      "dates_with_signal": 386,
+      "zero_signal_dates": 452,
+      "date_coverage": 0.4606205250596659,
+      "precision": 0.7110157367668097,
+      "specificity": 0.9807774658609697,
+      "sensitivity": 0.03224864549200272,
+      "prevalence": 0.594579475308642,
+      "minimum_fold_signal_coverage": 0.29508196721311475,
+      "minimum_fold_precision": 0.4405594405594406,
+      "mean_fold_precision": 0.6978064824070618,
+      "std_fold_precision": 0.1876820202356977,
+      "minimum_fold_specificity": 0.9748190116462071,
+      "coverage_constraints_pass": true,
+      "minimum_pooled_coverage_required": 0.25,
+      "minimum_fold_coverage_required": 0.25
+    },
+    "baseline_train_oof_metrics": {
+      "true_positive": 1987,
+      "false_positive": 1029,
+      "true_negative": 19988,
+      "false_negative": 28836,
+      "events": 51840,
+      "signals": 3016,
+      "expected_signals": 3016,
+      "signal_rate": 0.058179012345679015,
+      "dates": 838,
+      "dates_with_signal": 838,
+      "date_coverage": 1.0,
+      "precision": 0.6588196286472149,
+      "specificity": 0.9510396345815293,
+      "sensitivity": 0.0644648476786815,
+      "prevalence": 0.594579475308642,
+      "min_fold_specificity": 0.9445887445887445,
+      "mean_fold_specificity": 0.9506310330169242,
+      "std_fold_specificity": 0.004129262673777876,
+      "min_fold_precision": 0.44028520499108736,
+      "policy_complete": true
+    },
+    "selection_hierarchy": [
+      "require_coverage_constraints",
+      "minimize_false_positive_count",
+      "maximize_precision",
+      "maximize_true_positive_count",
+      "maximize_minimum_fold_precision",
+      "minimize_fold_precision_standard_deviation",
+      "maximize_minimum_fold_specificity",
+      "maximize_signal_count",
+      "prefer_simpler_gate",
+      "prefer_lower_threshold_quantile",
+      "deterministic_candidate_id"
+    ],
+    "safeguards": {
+      "unseen_test_loaded": false,
+      "unseen_test_labels_used": false,
+      "economic_returns_used_for_selection": false,
+      "portfolio_metrics_used_for_selection": false,
+      "model_retrained": false,
+      "hyperparameters_changed": false,
+      "feature_set_changed": false,
+      "calibration_fitted": false,
+      "hard_started_filter_applied": false,
+      "minimum_signals_per_date_is_zero": true
+    },
+    "configuration_hash": "4258a918e31d58a930b1ffc39520e5702f82bdd6f7be27288312ea83c8a474f4"
+  },
+  "unseen_test_used": false,
+  "economic_returns_used": false,
+  "portfolio_metrics_used": false,
+  "configuration_hash": "e3fd8d494ea6bfe0a9f2e04342912aa7788478c3ecc6381aa7115a4c62bba8f5"
+}

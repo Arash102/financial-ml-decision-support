@@ -1,0 +1,6 @@
+﻿fold_id,events,dates,first_date,last_date,positive_fraction,minimum_raw_score,mean_raw_score,maximum_raw_score,regimes,selected_model,selected_feature_set,selected_trial,candidate_regime_source_rows,missing_oof_regime_event_ids,event_id_reconstruction_rule,unseen_test_used
+1,10344,92,2017-09-19,2018-01-31,0.3857308584686775,0.2977989912033081,0.5420504884977305,0.7220383286476135,2,xgboost,I_full_40,10,118464,0,symbol::YYYY-MM-DD_from_candidate_filename_and_dEven,False
+2,10408,91,2018-02-03,2018-06-27,0.46666026133743277,0.3084114193916321,0.5268181515234787,0.7322474718093872,3,xgboost,I_full_40,10,118464,0,symbol::YYYY-MM-DD_from_candidate_filename_and_dEven,False
+3,10397,136,2018-06-30,2019-01-15,0.7263633740502068,0.2732322812080383,0.46135680758002584,0.7502404451370239,4,xgboost,I_full_40,10,118464,0,symbol::YYYY-MM-DD_from_candidate_filename_and_dEven,False
+4,10319,231,2019-01-16,2020-01-04,0.888070549471848,0.3034816086292267,0.5298643628373051,0.8347606062889099,3,xgboost,I_full_40,10,118464,0,symbol::YYYY-MM-DD_from_candidate_filename_and_dEven,False
+5,10372,288,2020-01-05,2021-03-14,0.5071345931353645,0.3298528492450714,0.5887385896054006,0.8307157754898071,5,xgboost,I_full_40,10,118464,0,symbol::YYYY-MM-DD_from_candidate_filename_and_dEven,False
