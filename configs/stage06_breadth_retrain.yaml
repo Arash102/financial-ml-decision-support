@@ -1,0 +1,83 @@
+status: stage_06_breadth_retrain_v4
+
+design:
+  tuning_feature_set: I_full_40
+  tune_each_feature_set_separately: false
+  rationale: shared model-family hyperparameters reduce search multiplicity and make feature-set comparisons operationally comparable
+  unseen_test_used: false
+  threshold_selected: false
+
+added_stage04_features:
+  started_run_length:
+    data_type: numeric
+  market_breadth_raw:
+    data_type: numeric
+  market_breadth_ema30:
+    data_type: numeric
+  market_breadth_slope5:
+    data_type: numeric
+  market_breadth_regime:
+    data_type: categorical
+
+feature_sets:
+  A_baseline_35: []
+  B_plus_started:
+    - started_run_length
+  C_plus_breadth_raw:
+    - market_breadth_raw
+  D_plus_breadth_ema30:
+    - market_breadth_ema30
+  E_plus_breadth_slope5:
+    - market_breadth_slope5
+  F_plus_all_continuous_breadth:
+    - market_breadth_raw
+    - market_breadth_ema30
+    - market_breadth_slope5
+  G_plus_breadth_regime:
+    - market_breadth_regime
+  H_plus_slope5_and_regime:
+    - market_breadth_slope5
+    - market_breadth_regime
+  I_full_40:
+    - started_run_length
+    - market_breadth_raw
+    - market_breadth_ema30
+    - market_breadth_slope5
+    - market_breadth_regime
+
+policy:
+  type: daily_cross_sectional_top_fraction
+  selected_fraction: 0.05
+  minimum_signals_per_date: 1
+  quota_rounding: ceil
+  score_order: descending
+  deterministic_tie_break:
+    - symbol_ascending
+    - event_id_ascending
+  probability_threshold_selected: false
+
+trial_selection_hierarchy:
+  - require_policy_complete
+  - minimize_false_positive
+  - maximize_precision
+  - maximize_min_fold_specificity
+  - minimize_fold_specificity_std
+  - maximize_mean_average_precision
+  - maximize_mean_roc_auc
+  - lower_trial_number
+
+model_feature_selection_hierarchy:
+  - require_policy_complete
+  - minimize_false_positive
+  - maximize_precision
+  - maximize_min_fold_specificity
+  - minimize_fold_specificity_std
+  - maximize_mean_average_precision
+  - maximize_mean_roc_auc
+  - deterministic_feature_set_then_model_name
+
+reporting:
+  save_all_tree_feature_set_predictions: true
+  save_all_daily_policy_assignments: true
+  validation_metrics_weighted: false
+  average_uniqueness_train_weighting: true
