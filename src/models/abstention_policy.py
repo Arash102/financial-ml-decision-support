@@ -14,6 +14,141 @@ ABSTENTION_POLICY_SCHEMA_VERSION = (
 )
 
 
+
+def candidate_symbol_from_path(path: Path) -> str:
+    """Recover the frozen symbol identity from a train-candidate filename."""
+    suffix = "_train_candidates.csv"
+    if not path.name.endswith(suffix):
+        raise ValueError(
+            f"Unexpected candidate file name: {path.name}"
+        )
+    return path.name[:-len(suffix)]
+
+
+def load_candidate_regime_sources(
+    candidate_paths: Iterable[Path],
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Load candidate Breadth regimes and reconstruct the Stage 06 event identity.
+
+    The train candidate CSVs do not store ``event_id``. Stage 06 created it as
+    ``symbol::YYYY-MM-DD`` after deriving ``symbol`` from the filename. This
+    helper deliberately reproduces that exact frozen identity rule.
+    """
+    parts: list[pd.DataFrame] = []
+    errors: list[dict[str, object]] = []
+
+    for path in candidate_paths:
+        symbol = ""
+        try:
+            symbol = candidate_symbol_from_path(path)
+            header = pd.read_csv(path, nrows=0)
+            required = {
+                "dEven",
+                "market_breadth_regime",
+            }
+            missing = sorted(required - set(header.columns))
+            if missing:
+                raise KeyError(
+                    f"Missing candidate columns: {missing}"
+                )
+
+            frame = pd.read_csv(
+                path,
+                usecols=[
+                    "dEven",
+                    "market_breadth_regime",
+                ],
+                low_memory=False,
+            )
+            event_dates = pd.to_datetime(
+                frame["dEven"],
+                errors="coerce",
+            ).dt.normalize()
+            if event_dates.isna().any():
+                raise ValueError(
+                    "Candidate file contains invalid dEven values."
+                )
+
+            frame.insert(0, "symbol", symbol)
+            frame.insert(
+                0,
+                "event_id",
+                (
+                    symbol
+                    + "::"
+                    + event_dates.dt.strftime("%Y-%m-%d")
+                ),
+            )
+            frame["dEven"] = event_dates
+            frame["market_breadth_regime"] = (
+                frame["market_breadth_regime"].astype("string")
+            )
+
+            if frame["event_id"].duplicated().any():
+                raise ValueError(
+                    "Candidate file contains duplicate reconstructed event IDs."
+                )
+            if frame["market_breadth_regime"].isna().any():
+                raise ValueError(
+                    "Candidate file contains missing Breadth regimes."
+                )
+
+            parts.append(
+                frame[
+                    [
+                        "event_id",
+                        "symbol",
+                        "dEven",
+                        "market_breadth_regime",
+                    ]
+                ]
+            )
+        except Exception as exc:
+            errors.append(
+                {
+                    "symbol": symbol,
+                    "file_name": path.name,
+                    "error_type": type(exc).__name__,
+                    "error_message": str(exc),
+                }
+            )
+
+    error_frame = pd.DataFrame(
+        errors,
+        columns=[
+            "symbol",
+            "file_name",
+            "error_type",
+            "error_message",
+        ],
+    )
+
+    if parts:
+        regime_frame = pd.concat(parts, ignore_index=True)
+    else:
+        regime_frame = pd.DataFrame(
+            columns=[
+                "event_id",
+                "symbol",
+                "dEven",
+                "market_breadth_regime",
+            ]
+        )
+
+    if not regime_frame.empty:
+        if regime_frame["event_id"].duplicated().any():
+            raise ValueError(
+                "Candidate regime panel contains duplicate event IDs."
+            )
+        regime_frame = regime_frame.sort_values(
+            ["dEven", "symbol", "event_id"],
+            kind="stable",
+        ).reset_index(drop=True)
+
+    return regime_frame, error_frame
+
+
 @dataclass(frozen=True)
 class AbstentionPolicy:
     """Frozen post-model decision policy with an explicit no-trade option."""
