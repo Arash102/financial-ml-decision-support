@@ -63,6 +63,37 @@ def test_daily_breadth_is_bounded_and_prefix_invariant() -> None:
     )
 
 
+def test_warmup_is_encoded_without_future_data() -> None:
+    observations = _synthetic_observations()
+    daily, audit = build_daily_market_breadth(
+        observations,
+        config=Stage04BreadthConfig(
+            ema_span=30,
+            ema_min_periods=30,
+            slope_lag_market_dates=5,
+            warmup_numeric_fill_value=0.0,
+        ),
+    )
+    warmup = daily["market_breadth_regime"].eq(
+        "warmup_unavailable"
+    )
+    assert warmup.any()
+    assert daily["market_breadth_ema30"].notna().all()
+    assert daily["market_breadth_slope5"].notna().all()
+    assert daily.loc[
+        warmup,
+        "market_breadth_slope5",
+    ].eq(0.0).all()
+    assert (
+        audit["ema30_missing_rows_before_warmup_encoding"]
+        > 0
+    )
+    assert (
+        audit["slope5_missing_rows_before_warmup_encoding"]
+        > 0
+    )
+
+
 def test_unchanged_symbols_remain_in_denominator() -> None:
     observations = pd.DataFrame(
         {

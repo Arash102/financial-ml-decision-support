@@ -70,3 +70,12 @@ Candidate identity preserved: True
 Hard started filter applied: False
 Hard breadth filter applied: False
 ```
+
+
+## Hotfix v2.1: causal warm-up encoding
+
+The exact EMA30 and slope5 definitions are unchanged after sufficient causal
+history exists. During the initial warm-up only, unavailable numeric values are
+encoded as `0.0`, while `market_breadth_regime` remains
+`warmup_unavailable`. The audit records how many rows were encoded. No future
+data is used and no candidate row is removed.

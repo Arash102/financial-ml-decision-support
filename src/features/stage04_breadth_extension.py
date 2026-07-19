@@ -46,6 +46,7 @@ class Stage04BreadthConfig:
     slope_lag_market_dates: int = 5
     transition_lower: float = -0.30
     transition_upper: float = 0.30
+    warmup_numeric_fill_value: float = 0.0
     output_encoding: str = "utf-8-sig"
 
 
@@ -304,6 +305,9 @@ def build_daily_market_breadth(
             "Breadth counts do not sum to the denominator."
         )
 
+    ema30_warmup = daily["market_breadth_ema30"].isna()
+    slope5_warmup = daily["market_breadth_slope5"].isna()
+
     audit = {
         "calendar_rows": int(len(daily)),
         "first_date": daily[config.date_column].min(),
@@ -317,18 +321,34 @@ def build_daily_market_breadth(
         "raw_missing_rows": int(
             daily["market_breadth_raw"].isna().sum()
         ),
-        "ema30_missing_rows": int(
-            daily["market_breadth_ema30"].isna().sum()
+        "ema30_missing_rows_before_warmup_encoding": int(
+            ema30_warmup.sum()
         ),
-        "slope5_missing_rows": int(
-            daily["market_breadth_slope5"].isna().sum()
+        "slope5_missing_rows_before_warmup_encoding": int(
+            slope5_warmup.sum()
         ),
         "warmup_regime_rows": int(
             daily["market_breadth_regime"]
             .eq("warmup_unavailable")
             .sum()
         ),
+        "warmup_numeric_fill_value": float(
+            config.warmup_numeric_fill_value
+        ),
     }
+
+    # The EMA30 and slope5 definitions remain exact whenever enough causal
+    # history exists. During warm-up, unavailable numeric values are encoded
+    # with a deterministic neutral value and the categorical state remains
+    # ``warmup_unavailable``. No future information is introduced.
+    daily.loc[
+        ema30_warmup,
+        "market_breadth_ema30",
+    ] = float(config.warmup_numeric_fill_value)
+    daily.loc[
+        slope5_warmup,
+        "market_breadth_slope5",
+    ] = float(config.warmup_numeric_fill_value)
 
     output_columns = [
         config.date_column,
