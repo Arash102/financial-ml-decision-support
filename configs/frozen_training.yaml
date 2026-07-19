@@ -1,15 +1,23 @@
-status: stage_07_configured_v1
+status: stage_07_configured_v2_breadth_retrain
+
 selected_model: xgboost
 selection_source: results/manifests/06_model_selection_decision.json
 hyperparameter_source: results/optuna/06_best_hyperparameters.json
+
 training_population:
   source: stage04_primary_long_candidates_train_only
   expected_events: 118464
   expected_symbols: 499
-  expected_features: 35
+  expected_feature_set: I_full_40
+  expected_features: 40
+  expected_numeric_features: 38
+  expected_categorical_features:
+    - gmma_state
+    - market_breadth_regime
   target_column: meta_label
   event_start_column: dEven
   event_end_column: event_end_date
+
 sample_weighting:
   method: average_uniqueness
   source_scope: complete_eligible_train_candidate_population
@@ -20,32 +28,44 @@ sample_weighting:
   unseen_test_events_used: false
   return_attribution_multiplier_used: false
   sequential_bootstrap_used: false
+
 model_fit:
   random_seed: 1729
   sample_weight_parameter: model__sample_weight
   fit_selected_primary_model_only: true
   fit_challenger_model: false
+  consume_selected_feature_set_exactly: true
+  consume_selected_hyperparameters_exactly: true
   training_metrics_reported: false
   in_sample_predictions_used_only_for_integrity_checks: true
+
+signal_policy_lineage:
+  type: daily_cross_sectional_top_fraction
+  fraction: 0.05
+  minimum_signals_per_date: 1
+  probability_threshold_selected: false
+
 probability_policy:
   calibration_fitted: false
   threshold_selected: false
   raw_probabilities_may_be_used_for_ranking: true
   raw_probabilities_must_not_be_interpreted_as_calibrated: true
+
 outputs:
   model_file: results/models/07_frozen_xgboost_pipeline.joblib
   model_card: results/models/07_frozen_xgboost_model_card.json
   weights_file: results/folds/07_full_train_average_uniqueness_weights.csv
   manifest: results/manifests/07_frozen_model_training_manifest.json
+
 rules:
-- Consume the Stage 06 primary model decision and selected hyperparameters without
-  modification.
-- Use all and only the complete eligible train-only candidate population.
-- Recompute Average Uniqueness once over the complete train candidate population,
-  within symbol.
-- Fit no challenger model in the primary Stage 07 run.
-- Do not load or inspect unseen-test candidate files.
-- Do not select a probability threshold.
-- Do not fit a probability calibrator.
-- Do not report in-sample discrimination as evidence of model quality.
-- Serialize the complete preprocessing-plus-model pipeline and verify reload equivalence.
+  - Consume the Stage 06 primary model family, selected feature set, selected trial, and selected hyperparameters without modification.
+  - Use all and only the complete eligible train-only candidate population.
+  - Recompute Average Uniqueness once over the complete train candidate population, within symbol.
+  - Fit no challenger model in the primary Stage 07 run.
+  - Do not load or inspect unseen-test candidate files.
+  - Do not select a probability threshold.
+  - Do not fit a probability calibrator.
+  - Do not apply a hard started filter.
+  - Do not apply a hard Breadth filter.
+  - Do not report in-sample discrimination as evidence of model quality.
+  - Serialize the complete preprocessing-plus-model pipeline and verify reload equivalence.
