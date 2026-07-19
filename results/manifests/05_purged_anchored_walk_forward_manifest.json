@@ -2,9 +2,9 @@
   "stage": 5,
   "status": "frozen_after_integrity_checks",
   "notebook": "05_purged_walk_forward_design.ipynb",
-  "git_commit_sha": "11408297113ea21acafb2b01caaea5bfbb8fd596",
+  "git_commit_sha": "4c138e980068f5b5c6dfb8ae2e188284435cf57c",
   "software": {
-    "timestamp_utc": "2026-07-16T19:31:47.551439+00:00",
+    "timestamp_utc": "2026-07-19T13:49:25.234247+00:00",
     "python_version": "3.12.2 (tags/v3.12.2:6abddd9, Feb  6 2024, 21:26:36) [MSC v.1937 64 bit (AMD64)]",
     "platform": "Windows-10-10.0.19045-SP0",
     "numpy_version": "1.26.4",
