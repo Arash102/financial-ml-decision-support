@@ -1,24 +1,114 @@
 {
   "primary_selected_model": "xgboost",
-  "challenger_model": "random_forest",
-  "selection_scope": [
-    "random_forest",
-    "xgboost"
+  "primary_selected_feature_set": "I_full_40",
+  "primary_selected_features": [
+    "ema_3_distance",
+    "ema_5_distance",
+    "ema_8_distance",
+    "ema_10_distance",
+    "ema_12_distance",
+    "ema_15_distance",
+    "ema_30_distance",
+    "ema_35_distance",
+    "ema_40_distance",
+    "ema_45_distance",
+    "ema_50_distance",
+    "ema_60_distance",
+    "ema_200_distance",
+    "rsi_14_centered",
+    "macd_relative",
+    "log_power_of_buy",
+    "log_volume_ratio_30",
+    "ho_buy_fraction",
+    "ho_sell_fraction",
+    "x_relative_strength_zscore",
+    "y_return_zscore",
+    "log_positive_rs_run_length",
+    "body_ratio",
+    "market_return_1",
+    "market_return_5",
+    "market_return_20",
+    "market_volatility_20",
+    "market_ema_20_distance",
+    "market_ema_60_distance",
+    "market_range_fraction",
+    "market_close_location",
+    "market_drawdown_60",
+    "distance_above_confirmed_low_fraction",
+    "distance_below_confirmed_high_fraction",
+    "gmma_state",
+    "started_run_length",
+    "market_breadth_raw",
+    "market_breadth_ema30",
+    "market_breadth_slope5",
+    "market_breadth_regime"
   ],
-  "optuna_objective": "equal_fold_mean_roc_auc",
-  "near_best_mean_auc_tolerance": 0.005,
-  "hierarchical_rule": [
-    "identify_best_mean_fold_roc_auc",
-    "retain_candidates_within_0.005_of_best_mean",
-    "maximize_worst_fold_roc_auc",
-    "minimize_fold_roc_auc_std",
-    "deterministic_final_tie_break"
-  ],
-  "selected_trial_numbers": {
-    "random_forest": 16,
-    "xgboost": 25
+  "challenger_model": "xgboost",
+  "challenger_feature_set": "E_plus_breadth_slope5",
+  "selection_scope": {
+    "models": [
+      "random_forest",
+      "xgboost"
+    ],
+    "feature_sets": [
+      "A_baseline_35",
+      "B_plus_started",
+      "C_plus_breadth_raw",
+      "D_plus_breadth_ema30",
+      "E_plus_breadth_slope5",
+      "F_plus_all_continuous_breadth",
+      "G_plus_breadth_regime",
+      "H_plus_slope5_and_regime",
+      "I_full_40"
+    ]
   },
-  "fold_weighting": "equal",
+  "tuning_feature_set": "I_full_40",
+  "tune_each_feature_set_separately": false,
+  "optuna_sampler_objective": "equal_fold_mean_roc_auc",
+  "trial_selection_hierarchy": [
+    "require_policy_complete",
+    "minimize_false_positive",
+    "maximize_precision",
+    "maximize_min_fold_specificity",
+    "minimize_fold_specificity_std",
+    "maximize_mean_average_precision",
+    "maximize_mean_roc_auc",
+    "lower_trial_number"
+  ],
+  "model_feature_selection_hierarchy": [
+    "require_policy_complete",
+    "minimize_false_positive",
+    "maximize_precision",
+    "maximize_min_fold_specificity",
+    "minimize_fold_specificity_std",
+    "maximize_mean_average_precision",
+    "maximize_mean_roc_auc",
+    "deterministic_feature_set_then_model_name"
+  ],
+  "fixed_policy": {
+    "type": "daily_cross_sectional_top_fraction",
+    "selected_fraction": 0.05,
+    "minimum_signals_per_date": 1,
+    "quota_rounding": "ceil",
+    "tie_break": [
+      "probability_positive_descending",
+      "symbol_ascending",
+      "event_id_ascending"
+    ]
+  },
+  "threshold_selected": false,
+  "selected_false_positive": 1029,
+  "selected_true_positive": 1987,
+  "selected_precision": 0.6588196286472149,
+  "selected_specificity": 0.9510396345815293,
+  "selected_min_fold_specificity": 0.9445887445887445,
+  "selected_mean_roc_auc": 0.5227934492043504,
+  "selected_mean_average_precision": 0.6223581419295476,
+  "selected_tree_beats_logistic_on_mean_auc": true,
+  "selected_trial_numbers": {
+    "random_forest": 8,
+    "xgboost": 10
+  },
   "average_uniqueness_weighting": {
     "method": "average_uniqueness",
     "scope": "current_fold_training_events_only",
@@ -31,13 +121,7 @@
     "dummy_prior_weighted": false,
     "validation_metrics_weighted": false
   },
-  "diagnostic_threshold": 0.5,
-  "threshold_selected": false,
-  "selected_tree_mean_roc_auc": 0.5487967820210273,
-  "selected_tree_min_roc_auc": 0.4853846305916497,
-  "selected_tree_std_roc_auc": 0.06069149378648962,
-  "logistic_baseline_mean_roc_auc": 0.5180371895159395,
-  "logistic_baseline_min_roc_auc": 0.4500478061150257,
-  "selected_tree_beats_logistic_on_mean_auc": true,
+  "hard_started_filter_applied": false,
+  "hard_breadth_filter_applied": false,
   "unseen_test_used": false
 }
