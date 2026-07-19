@@ -1,9 +1,13 @@
-status: stage_08_configured_v2_stage06_policy_lock
+status: stage_08_configured_v3_train_only_abstention_policy_selection
+stage_title: train_only_breadth_gate_threshold_and_daily_cap_policy_selection
 
 input:
   prediction_file: results/predictions/06_walk_forward_validation_predictions.csv
+  candidate_directory: data_ready/candidates/train
+  candidate_file_glob: "*_train_candidates.csv"
   selected_model: xgboost
   selected_feature_set: I_full_40
+  selected_trial: 10
   expected_oof_rows: 51840
   expected_fold_counts:
     1: 10344
@@ -11,10 +15,16 @@ input:
     3: 10397
     4: 10319
     5: 10372
+  expected_baseline_signals: 3016
+  expected_baseline_fold_signals:
+    1: 561
+    2: 566
+    3: 594
+    4: 624
+    5: 671
 
-policy:
-  implementation_schema_version: stage06_v4_daily_top_fraction_false_positive_priority
-  policy_type: daily_cross_sectional_top_fraction
+baseline_policy:
+  type: daily_cross_sectional_top_fraction
   selected_fraction: 0.05
   minimum_signals_per_date: 1
   quota_rounding: ceil
@@ -22,38 +32,93 @@ policy:
     - score_descending
     - symbol_ascending
     - event_id_ascending
-  expected_total_oof_signals: 3016
-  expected_fold_signal_counts:
-    1: 561
-    2: 566
-    3: 594
-    4: 624
-    5: 671
 
-score_policy:
-  selected_calibration_method: raw_identity
-  probability_calibrator_fitted: false
-  probability_threshold_selected: false
-  literal_probability_interpretation_allowed: false
-  cross_sectional_ranking_allowed: true
+abstention_policy:
+  implementation_schema_version: stage08_v3_train_only_breadth_gate_threshold_daily_cap
+  maximum_daily_fraction: 0.05
+  minimum_signals_per_date: 0
+  score_interpretation: uncalibrated_ranking_score
+  fixed_probability_threshold_interpretation_allowed: false
+  threshold_source: quantiles_of_train_oof_baseline_selected_scores
+  threshold_quantiles:
+    - 0.00
+    - 0.25
+    - 0.50
+    - 0.65
+    - 0.75
+  regime_gates:
+    G0_all:
+      gate_complexity: 0
+      allowed_regimes:
+        - broad_decline
+        - recovery_negative
+        - recovery_positive
+        - deterioration
+        - neutral_transition
+        - broad_advance
+        - warmup_unavailable
+    G1_block_broad_decline:
+      gate_complexity: 1
+      allowed_regimes:
+        - recovery_negative
+        - recovery_positive
+        - deterioration
+        - neutral_transition
+        - broad_advance
+        - warmup_unavailable
+    G2_block_decline_and_deterioration:
+      gate_complexity: 2
+      allowed_regimes:
+        - recovery_negative
+        - recovery_positive
+        - neutral_transition
+        - broad_advance
+        - warmup_unavailable
+    G3_recovery_only:
+      gate_complexity: 3
+      allowed_regimes:
+        - recovery_negative
+        - recovery_positive
+
+coverage_constraints:
+  minimum_pooled_signal_coverage_vs_baseline: 0.25
+  minimum_each_fold_signal_coverage_vs_baseline: 0.25
+  require_all_five_folds: true
+
+selection_hierarchy:
+  - require_coverage_constraints
+  - minimize_false_positive_count
+  - maximize_precision
+  - maximize_true_positive_count
+  - maximize_minimum_fold_precision
+  - minimize_fold_precision_standard_deviation
+  - maximize_minimum_fold_specificity
+  - maximize_signal_count
+  - prefer_simpler_gate
+  - prefer_lower_threshold_quantile
+  - deterministic_candidate_id
 
 safeguards:
-  policy_reselected_in_stage08: false
-  calibration_candidates_evaluated: false
-  signal_fraction_candidates_evaluated: false
-  hard_started_filter_applied: false
-  hard_breadth_filter_applied: false
-  economic_returns_used_for_selection: false
-  portfolio_metrics_used_for_selection: false
   unseen_test_loaded: false
   unseen_test_labels_used: false
+  economic_returns_used_for_selection: false
+  portfolio_metrics_used_for_selection: false
   model_retrained: false
+  hyperparameters_changed: false
+  feature_set_changed: false
+  calibration_fitted: false
+  literal_probability_interpretation_allowed: false
+  hard_started_filter_applied: false
+  candidate_rows_dropped: false
+  minimum_signals_per_date_is_zero: true
 
 rules:
-  - Consume the Stage 06 selected model, feature set, trial, and fixed daily policy without modification.
-  - Filter OOF predictions by both model_name and feature_set_name.
-  - Do not search candidate calibration methods.
-  - Do not search candidate signal fractions.
-  - Use raw XGBoost scores only for same-day ranking.
-  - Do not select a fixed probability threshold.
-  - Do not open unseen-test files or labels.
+  - Join market_breadth_regime to exact selected-model OOF rows by immutable event_id.
+  - Reconstruct the old Top-5%-minimum-one policy only as the train-OOF baseline.
+  - Generate a small preregistered grid of four regime gates and five score thresholds.
+  - Compute threshold values only from train-OOF baseline-selected raw scores.
+  - Apply gate and threshold before the daily Top-5% maximum cap.
+  - Permit zero signals on any date.
+  - Require at least 25 percent of baseline signals overall and in every fold.
+  - Select policy only from OOF labels using the frozen hierarchy.
+  - Do not open, score, or inspect the 2021-2024 evaluation period.
