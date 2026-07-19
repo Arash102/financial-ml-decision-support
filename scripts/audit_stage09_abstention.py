@@ -8,6 +8,11 @@ import traceback
 import numpy as np
 import pandas as pd
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
 from src.audit.stage09_abstention_audit import (
     AUDIT_SCHEMA_VERSION,
     FrozenPolicy,
