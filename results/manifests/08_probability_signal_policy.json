@@ -1,21 +1,71 @@
 {
   "stage": 8,
   "status": "frozen_train_only_policy",
-  "stage_version": "v1_raw_rank_daily_top_fraction",
+  "stage_version": "v2_stage06_selected_model_feature_set_raw_rank_policy_lock",
   "score_policy": {
     "source_model": "xgboost",
+    "source_feature_set": "I_full_40",
+    "source_trial": 10,
+    "source_model_sha256": "73a781551cdabd6bb67f5b9c0836a8683372e46487d9aade29e6320006086c1f",
     "source_prediction_column": "probability_positive",
     "selected_calibration_method": "raw_identity",
     "probability_calibrator_fitted": false,
     "score_name_for_downstream_use": "xgboost_ranking_score",
     "literal_probability_interpretation_allowed": false,
-    "ranking_use_allowed": true,
-    "reason": "Post-hoc calibration candidates did not satisfy the frozen temporal stability and rank-preservation gates."
+    "ranking_use_allowed": true
+  },
+  "feature_lineage": {
+    "selected_feature_set": "I_full_40",
+    "selected_raw_features": [
+      "ema_3_distance",
+      "ema_5_distance",
+      "ema_8_distance",
+      "ema_10_distance",
+      "ema_12_distance",
+      "ema_15_distance",
+      "ema_30_distance",
+      "ema_35_distance",
+      "ema_40_distance",
+      "ema_45_distance",
+      "ema_50_distance",
+      "ema_60_distance",
+      "ema_200_distance",
+      "rsi_14_centered",
+      "macd_relative",
+      "log_power_of_buy",
+      "log_volume_ratio_30",
+      "ho_buy_fraction",
+      "ho_sell_fraction",
+      "x_relative_strength_zscore",
+      "y_return_zscore",
+      "log_positive_rs_run_length",
+      "body_ratio",
+      "market_return_1",
+      "market_return_5",
+      "market_return_20",
+      "market_volatility_20",
+      "market_ema_20_distance",
+      "market_ema_60_distance",
+      "market_range_fraction",
+      "market_close_location",
+      "market_drawdown_60",
+      "distance_above_confirmed_low_fraction",
+      "distance_below_confirmed_high_fraction",
+      "gmma_state",
+      "started_run_length",
+      "market_breadth_raw",
+      "market_breadth_ema30",
+      "market_breadth_slope5",
+      "market_breadth_regime"
+    ],
+    "selected_raw_feature_count": 40
   },
   "signal_policy": {
     "policy_type": "daily_cross_sectional_top_fraction",
+    "implementation_schema_version": "stage06_v4_daily_top_fraction_false_positive_priority",
     "selected_fraction": 0.05,
     "minimum_signals_per_date": 1,
+    "quota_rounding": "ceil",
     "ranking_order": [
       "score_descending",
       "symbol_ascending",
@@ -23,14 +73,6 @@
     ],
     "fixed_probability_threshold_selected": false,
     "daily_cutoff_is_dynamic": true,
-    "development_folds": [
-      1,
-      2,
-      3,
-      4
-    ],
-    "confirmation_fold": 5,
-    "confirmation_fold_used_for_selection": false,
     "expected_total_oof_signals": 3016,
     "fold_signal_counts": {
       "1": 561,
@@ -41,22 +83,13 @@
     }
   },
   "selection_evidence": {
-    "calibration_development_folds": [
-      2,
-      3,
-      4
-    ],
-    "calibration_confirmation_fold": 5,
-    "signal_development_folds": [
-      1,
-      2,
-      3,
-      4
-    ],
-    "signal_confirmation_fold": 5,
+    "policy_selected_in_stage06": true,
+    "policy_reselected_in_stage08": false,
+    "calibration_candidates_evaluated": false,
+    "signal_fraction_candidates_evaluated": false,
     "economic_returns_used": false,
     "portfolio_metrics_used": false,
     "unseen_test_used": false
   },
-  "downstream_rule": "For every signal date, rank all eligible long candidate events by the raw XGBoost score descending, then symbol and event ID ascending; select max(1, ceil(0.05 * candidate_count))."
+  "downstream_rule": "For each signal date, score every eligible long candidate with the frozen Stage 07 XGBoost I_full_40 pipeline; rank raw scores descending, then symbol and event_id ascending; select max(1, ceil(0.05 * candidate_count))."
 }

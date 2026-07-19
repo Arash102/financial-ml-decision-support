@@ -1,23 +1,26 @@
 {
   "stage": 8,
   "status": "frozen_after_integrity_checks",
-  "stage_version": "v1_train_only_probability_signal_policy",
+  "stage_version": "v2_stage06_policy_lock_no_reselection",
   "notebook": "08_unseen_test_evaluation.ipynb",
-  "git_commit_sha": "ad556c0e427e9de02c7ac658046582edc20c5180",
+  "git_commit_sha": "56d2b5e5e2d22f4bd46f8a62a058e09a26531b31",
   "software": {
-    "timestamp_utc": "2026-07-18T09:44:17.129802+00:00",
+    "timestamp_utc": "2026-07-19T19:01:43.164243+00:00",
     "python_version": "3.12.2 (tags/v3.12.2:6abddd9, Feb  6 2024, 21:26:36) [MSC v.1937 64 bit (AMD64)]",
     "platform": "Windows-10-10.0.19045-SP0",
     "numpy_version": "1.26.4",
     "pandas_version": "2.2.3"
   },
   "lineage": {
-    "stage06_code_commit_sha": "884bab26097ea28c8b5bdcce78192791a2c07fc3",
-    "stage06_study_signature": "4e825015bd22",
+    "stage06_code_commit_sha": "9928795ae10f0a9fd64788e1880b6cacc249e855",
+    "stage06_configuration_hash": "ee11c83c947bd6e2164562bed0f797beae36977fb2e31325f6848a9232427b45",
+    "stage06_study_signature": "3ac1ee3f73df",
     "stage06_selected_model": "xgboost",
-    "stage07_code_commit_sha": "a057ae0ce8f139ceffed38c81507d03ce1f55540",
-    "stage07_model_sha256": "62a7f3e58d53213c92f1803b19135895497ebf24b56fa472c54047d762740688",
-    "stage07_training_population_sha256": "c5a87f8e995dde4c8075615da47345b09cc3d1022866e3fafe65f734752f625e"
+    "stage06_selected_feature_set": "I_full_40",
+    "stage06_selected_trial": 10,
+    "stage07_code_commit_sha": "4a6b344fc6219e08b32586002922f390061d285e",
+    "stage07_model_sha256": "73a781551cdabd6bb67f5b9c0836a8683372e46487d9aade29e6320006086c1f",
+    "stage07_training_population_sha256": "f0927c675e6160a95ee732c943776ffeeb281ff320f28eaeafff5c5ee0adcf6d"
   },
   "oof_input": {
     "rows": 51840,
@@ -30,24 +33,27 @@
     },
     "first_signal_date": "2017-09-19 00:00:00",
     "last_signal_date": "2021-03-14 00:00:00",
-    "selected_model": "xgboost"
+    "selected_model": "xgboost",
+    "selected_feature_set": "I_full_40"
   },
-  "calibration": {
-    "selected_method": "raw_identity",
-    "calibrator_fitted": false,
-    "development_folds": [
-      2,
-      3,
-      4
-    ],
-    "confirmation_fold": 5,
-    "fixed_probability_threshold_selected": false,
-    "literal_probability_interpretation_allowed": false
+  "score_policy": {
+    "source_model": "xgboost",
+    "source_feature_set": "I_full_40",
+    "source_trial": 10,
+    "source_model_sha256": "73a781551cdabd6bb67f5b9c0836a8683372e46487d9aade29e6320006086c1f",
+    "source_prediction_column": "probability_positive",
+    "selected_calibration_method": "raw_identity",
+    "probability_calibrator_fitted": false,
+    "score_name_for_downstream_use": "xgboost_ranking_score",
+    "literal_probability_interpretation_allowed": false,
+    "ranking_use_allowed": true
   },
   "signal_policy": {
     "policy_type": "daily_cross_sectional_top_fraction",
+    "implementation_schema_version": "stage06_v4_daily_top_fraction_false_positive_priority",
     "selected_fraction": 0.05,
     "minimum_signals_per_date": 1,
+    "quota_rounding": "ceil",
     "ranking_order": [
       "score_descending",
       "symbol_ascending",
@@ -55,14 +61,6 @@
     ],
     "fixed_probability_threshold_selected": false,
     "daily_cutoff_is_dynamic": true,
-    "development_folds": [
-      1,
-      2,
-      3,
-      4
-    ],
-    "confirmation_fold": 5,
-    "confirmation_fold_used_for_selection": false,
     "expected_total_oof_signals": 3016,
     "fold_signal_counts": {
       "1": 561,
@@ -72,12 +70,24 @@
       "5": 671
     }
   },
+  "oof_policy_metrics": {
+    "signals": 3016,
+    "true_positive": 1987,
+    "false_positive": 1029,
+    "precision": 0.6588196286472149,
+    "specificity": 0.9510396345815293
+  },
   "safeguards": {
+    "policy_reselected": false,
+    "calibrator_fitted": false,
+    "probability_threshold_selected": false,
+    "hard_started_filter_applied": false,
+    "hard_breadth_filter_applied": false,
     "unseen_test_loaded": false,
     "unseen_test_labels_used": false,
     "economic_returns_used_for_selection": false,
     "portfolio_metrics_used_for_selection": false,
     "model_retrained": false
   },
-  "configuration_hash": "3f645d9776fce31536e2800d1d02beb1320a5199a2306c35a29df8cba04941a1"
+  "configuration_hash": "7b691d2d4b722816ebb67444b033d1e223074b73b0587e2b65d46322bc83818b"
 }
