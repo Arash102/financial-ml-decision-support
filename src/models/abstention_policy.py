@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Iterable
 
 import numpy as np
@@ -204,6 +205,176 @@ def _confusion_counts(
         "true_negative": int(np.sum((~signal) & (y == 0))),
         "false_negative": int(np.sum((~signal) & (y == 1))),
     }
+
+
+
+def apply_abstention_policy_inference(
+    predictions: pd.DataFrame,
+    *,
+    policy: AbstentionPolicy,
+) -> pd.DataFrame:
+    """
+    Apply the frozen abstention policy without requiring labels or outcomes.
+
+    This is the production/inference form of the Stage 08 policy. It uses only
+    immutable identity columns, same-day Breadth regime, and the frozen raw
+    model score. Zero selected signals on a date is allowed.
+    """
+    policy.validate()
+
+    required = {
+        policy.date_column,
+        policy.score_column,
+        policy.regime_column,
+        policy.symbol_column,
+        policy.event_id_column,
+    }
+    missing = sorted(required - set(predictions.columns))
+    if missing:
+        raise KeyError(
+            f"Inference policy input is missing columns: {missing}"
+        )
+
+    frame = predictions.copy()
+    frame[policy.date_column] = pd.to_datetime(
+        frame[policy.date_column],
+        errors="coerce",
+    ).dt.normalize()
+    frame[policy.score_column] = pd.to_numeric(
+        frame[policy.score_column],
+        errors="coerce",
+    )
+    frame[policy.regime_column] = (
+        frame[policy.regime_column].astype("string")
+    )
+
+    if frame[policy.date_column].isna().any():
+        raise ValueError("Policy inference contains invalid dates.")
+    if not np.isfinite(
+        frame[policy.score_column].to_numpy(dtype=float)
+    ).all():
+        raise ValueError("Policy inference contains non-finite scores.")
+    if not frame[policy.score_column].between(0.0, 1.0).all():
+        raise ValueError("Policy inference scores must lie in [0, 1].")
+    if frame[policy.event_id_column].duplicated().any():
+        raise ValueError("Policy inference event IDs must be unique.")
+    if frame[policy.regime_column].isna().any():
+        raise ValueError("Policy inference regimes contain missing values.")
+
+    frame["_original_row_order"] = np.arange(
+        len(frame),
+        dtype=int,
+    )
+    frame = frame.sort_values(
+        [
+            policy.date_column,
+            policy.score_column,
+            policy.symbol_column,
+            policy.event_id_column,
+        ],
+        ascending=[True, False, True, True],
+        kind="stable",
+    ).reset_index(drop=True)
+
+    grouped = frame.groupby(
+        policy.date_column,
+        sort=False,
+        observed=False,
+    )
+    frame["daily_candidate_count"] = grouped[
+        policy.event_id_column
+    ].transform("size").astype(int)
+    frame["daily_maximum_quota"] = np.ceil(
+        frame["daily_candidate_count"].to_numpy(dtype=float)
+        * float(policy.maximum_daily_fraction)
+    ).astype(int)
+
+    frame["market_gate_pass"] = frame[
+        policy.regime_column
+    ].isin(list(policy.allowed_regimes))
+    frame["score_threshold_pass"] = frame[
+        policy.score_column
+    ].ge(float(policy.minimum_score))
+    frame["policy_eligible"] = (
+        frame["market_gate_pass"]
+        & frame["score_threshold_pass"]
+    )
+
+    frame["daily_eligible_count"] = (
+        frame["policy_eligible"]
+        .groupby(frame[policy.date_column], observed=False)
+        .transform("sum")
+        .astype(int)
+    )
+    frame["daily_signal_quota"] = np.minimum(
+        frame["daily_maximum_quota"].to_numpy(dtype=int),
+        frame["daily_eligible_count"].to_numpy(dtype=int),
+    ).astype(int)
+
+    eligible_rank = (
+        frame["policy_eligible"]
+        .groupby(frame[policy.date_column], observed=False)
+        .cumsum()
+    )
+    frame["daily_eligible_rank"] = np.where(
+        frame["policy_eligible"],
+        eligible_rank,
+        0,
+    ).astype(int)
+    frame["selected_signal"] = (
+        frame["policy_eligible"]
+        & frame["daily_eligible_rank"].gt(0)
+        & frame["daily_eligible_rank"].le(
+            frame["daily_signal_quota"]
+        )
+    )
+
+    selected_cutoff = (
+        frame.loc[
+            frame["selected_signal"],
+            [policy.date_column, policy.score_column],
+        ]
+        .groupby(
+            policy.date_column,
+            sort=False,
+            observed=False,
+        )[policy.score_column]
+        .min()
+        .rename("daily_selected_score_cutoff")
+    )
+    frame = frame.merge(
+        selected_cutoff,
+        left_on=policy.date_column,
+        right_index=True,
+        how="left",
+        validate="many_to_one",
+    )
+
+    selected_by_date = frame.groupby(
+        policy.date_column,
+        observed=False,
+    )["selected_signal"].sum().astype(int)
+    quota_by_date = frame.groupby(
+        policy.date_column,
+        observed=False,
+    )["daily_signal_quota"].first().astype(int)
+
+    if not selected_by_date.eq(quota_by_date).all():
+        raise AssertionError(
+            "Selected signal counts do not equal frozen abstention quotas."
+        )
+    if frame.loc[
+        ~frame["policy_eligible"],
+        "selected_signal",
+    ].any():
+        raise AssertionError(
+            "A gate- or threshold-rejected row was selected."
+        )
+
+    return frame.sort_values(
+        "_original_row_order",
+        kind="stable",
+    ).drop(columns=["_original_row_order"]).reset_index(drop=True)
 
 
 def apply_abstention_policy(
