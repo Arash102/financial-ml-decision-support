@@ -1,11 +1,9 @@
-status: stage_08_configured_v1
-stage_title: train_only_probability_and_signal_policy
+status: stage_08_configured_v2_stage06_policy_lock
+
 input:
   prediction_file: results/predictions/06_walk_forward_validation_predictions.csv
-  stage06_decision: results/manifests/06_model_selection_decision.json
-  stage06_manifest: results/manifests/06_optuna_model_selection_manifest.json
-  stage07_manifest: results/manifests/07_frozen_model_training_manifest.json
   selected_model: xgboost
+  selected_feature_set: I_full_40
   expected_oof_rows: 51840
   expected_fold_counts:
     1: 10344
@@ -13,67 +11,17 @@ input:
     3: 10397
     4: 10319
     5: 10372
-calibration_evaluation:
-  candidate_methods:
-  - raw_identity
-  - sigmoid_platt
-  - isotonic
-  expanding_origin_target_folds:
-  - 2
-  - 3
-  - 4
-  - 5
-  development_folds:
-  - 2
-  - 3
-  - 4
-  confirmation_fold: 5
-  probability_clip: 1.0e-06
-  ece_bins: 10
-  maximum_allowed_auc_drop: 0.005
-  minimum_mean_brier_improvement: 0.002
-  minimum_mean_logloss_improvement: 0.002
-  selection_order:
-  - admissibility
-  - minimum_mean_brier
-  - minimum_worst_fold_brier
-  - minimum_mean_logloss
-  - simpler_method
-  expected_selected_method: raw_identity
-  interpretation: The selected score is an uncalibrated ranking score and must not
-    be interpreted as a literal success probability.
-signal_policy:
+
+policy:
+  implementation_schema_version: stage06_v4_daily_top_fraction_false_positive_priority
   policy_type: daily_cross_sectional_top_fraction
-  score_column: probability_positive
-  candidate_fractions:
-  - 0.025
-  - 0.05
-  - 0.075
-  - 0.1
-  - 0.15
-  - 0.2
-  development_folds:
-  - 1
-  - 2
-  - 3
-  - 4
-  confirmation_fold: 5
-  minimum_signals_per_development_fold: 250
-  minimum_worst_fold_precision_lift: 0.0
-  near_best_worst_precision_lift_tolerance: 0.005
+  selected_fraction: 0.05
   minimum_signals_per_date: 1
+  quota_rounding: ceil
   ranking_order:
-  - score_descending
-  - symbol_ascending
-  - event_id_ascending
-  selection_order:
-  - eligible_constraints
-  - maximize_worst_fold_precision_lift
-  - retain_within_near_best_band
-  - maximize_mean_precision_lift
-  - maximize_mean_specificity
-  - prefer_lower_signal_fraction
-  expected_selected_fraction: 0.05
+    - score_descending
+    - symbol_ascending
+    - event_id_ascending
   expected_total_oof_signals: 3016
   expected_fold_signal_counts:
     1: 561
@@ -81,16 +29,31 @@ signal_policy:
     3: 594
     4: 624
     5: 671
-probability_and_threshold_policy:
+
+score_policy:
+  selected_calibration_method: raw_identity
   probability_calibrator_fitted: false
-  fixed_probability_threshold_selected: false
-  signal_policy_selected: true
-  raw_scores_may_be_used_for_ranking: true
-  raw_scores_must_not_be_interpreted_as_calibrated: true
+  probability_threshold_selected: false
+  literal_probability_interpretation_allowed: false
+  cross_sectional_ranking_allowed: true
+
 safeguards:
+  policy_reselected_in_stage08: false
+  calibration_candidates_evaluated: false
+  signal_fraction_candidates_evaluated: false
+  hard_started_filter_applied: false
+  hard_breadth_filter_applied: false
+  economic_returns_used_for_selection: false
+  portfolio_metrics_used_for_selection: false
   unseen_test_loaded: false
   unseen_test_labels_used: false
-  economic_returns_used_for_policy_selection: false
-  portfolio_metrics_used_for_policy_selection: false
-  fold5_used_for_policy_selection: false
   model_retrained: false
+
+rules:
+  - Consume the Stage 06 selected model, feature set, trial, and fixed daily policy without modification.
+  - Filter OOF predictions by both model_name and feature_set_name.
+  - Do not search candidate calibration methods.
+  - Do not search candidate signal fractions.
+  - Use raw XGBoost scores only for same-day ranking.
+  - Do not select a fixed probability threshold.
+  - Do not open unseen-test files or labels.
