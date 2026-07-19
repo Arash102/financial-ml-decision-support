@@ -1,0 +1,6 @@
+﻿market_breadth_regime,candidate_events,signal_dates,selected_signals,selected_positive_labels,selected_precision,allowed_by_frozen_gate
+broad_advance,39,13,0,0,,False
+broad_decline,6395,67,0,0,,False
+deterioration,39165,365,0,0,,False
+recovery_negative,24569,228,1337,711,0.531787584143605,True
+recovery_positive,8021,147,478,312,0.6527196652719666,True
